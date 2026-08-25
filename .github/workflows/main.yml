@@ -1,0 +1,158 @@
+name: 💖 Auto Deploy - Joker Workflow
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      deploy_message:
+        description: 'وصف النشر'
+        required: false
+        default: '💖 Auto Deploy'
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 1: سحب المستودع
+      # ═══════════════════════════════════════
+      - name: 📥 سحب المستودع
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 2: إعداد Python
+      # ═══════════════════════════════════════
+      - name: 🐍 إعداد Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 3: اكتشاف مجلد الإخراج
+      # ═══════════════════════════════════════
+      - name: 🔍 اكتشاف مجلد الإخراج من scraper.py
+        id: detect
+        run: |
+          # استخراج اسم المجلد من scraper.py
+          FOLDER=$(grep -oP "(?:ROOT_DIR|PROJECT_NAME)\s*=\s*['\"]?\K\w+" scraper.py | head -1)
+          if [ -z "$FOLDER" ]; then
+            # اسماء شائعة
+            for f in gtheb FileVault VIBE output build dist; do
+              if grep -q "$f" scraper.py 2>/dev/null; then
+                FOLDER="$f"
+                break
+              fi
+            done
+          fi
+          echo "folder=${FOLDER:-gtheb}" >> $GITHUB_OUTPUT
+          echo "📁 مجلد الإخراج: ${FOLDER:-gtheb}"
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 4: تشغيل المولد
+      # ═══════════════════════════════════════
+      - name: 🔧 تشغيل scraper.py
+        run: |
+          echo "💖 بدء توليد الملفات..."
+          python scraper.py
+          echo "✅ تم توليد الملفات"
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 5: نسخ الملفات
+      # ═══════════════════════════════════════
+      - name: 📁 نسخ الملفات للمجلد الرئيسي
+        run: |
+          FOLDER="${{ steps.detect.outputs.folder }}"
+          echo "📁 جاري نسخ الملفات من $FOLDER/ ..."
+          
+          if [ -d "$FOLDER" ]; then
+            cp -r $FOLDER/* . 2>/dev/null || true
+            cp -r $FOLDER/.[!.]* . 2>/dev/null || true
+            rm -rf $FOLDER
+            echo "✅ تم النسخ من $FOLDER/"
+          elif [ -d "gtheb" ]; then
+            cp -r gtheb/* . 2>/dev/null || true
+            cp -r gtheb/.[!.]* . 2>/dev/null || true
+            rm -rf gtheb
+            echo "✅ تم النسخ من gtheb/"
+          else
+            echo "⚠️ لم يتم العثور على مجلد إخراج"
+            echo "📋 الملفات الحالية:"
+            ls -la
+          fi
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 6: عرض الإحصائيات
+      # ═══════════════════════════════════════
+      - name: 📊 عرض إحصائيات الملفات
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════╗"
+          echo "║  💖 الملفات المنشأة  ║"
+          echo "╚══════════════════════════════════════╝"
+          echo ""
+          echo "📁 جميع الملفات:"
+          ls -la
+          echo ""
+          echo "📊 إحصائيات:"
+          echo "  • HTML: $(find . -maxdepth 1 -name '*.html' | wc -l)"
+          echo "  • CSS: $(find . -maxdepth 1 -name '*.css' | wc -l)"
+          echo "  • JS: $(find . -maxdepth 1 -name '*.js' | wc -l)"
+          echo "  • Java: $(find . -name '*.java' | wc -l)"
+          echo "  • XML: $(find . -name '*.xml' | wc -l)"
+          echo "  • Gradle: $(find . -name '*.gradle' | wc -l)"
+          echo "  • Total files: $(find . -type f | wc -l)"
+          echo "  • Total lines: $(find . -type f -exec cat {} + 2>/dev/null | wc -l)"
+          echo ""
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 7: رفع الملفات
+      # ═══════════════════════════════════════
+      - name: 🚀 رفع الملفات إلى GitHub
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "💖 Auto Deploy - ${{ github.event.inputs.deploy_message || 'Generated files' }} [skip ci]"
+          commit_author: "Bot 🤖 <actions@github.com>"
+          commit_user_email: "actions@github.com"
+          commit_user_name: "GitHub Actions Bot"
+          file_pattern: '*'
+          push_options: '--force'
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 8: تأكيد النشر
+      # ═══════════════════════════════════════
+      - name: ✅ تأكيد النشر
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════╗"
+          echo "║                                            ║"
+          echo "║  💖  Auto Deploy Complete                  ║"
+          echo "║  ✅  تم النشر بنجاح!                       ║"
+          echo "║                                            ║"
+          echo "║  🔗 ${{ github.server_url }}/${{ github.repository }}"
+          echo "║                                            ║"
+          echo "╚════════════════════════════════════════════╝"
+          echo ""
+
+  # ═══════════════════════════════════════════════
+  # 💖 إشعار
+  # ═══════════════════════════════════════════════
+  notify:
+    needs: generate-and-deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: 📊 ملخص
+        run: |
+          if [ "${{ needs.generate-and-deploy.result }}" == "success" ]; then
+            echo "🟢 النشر نجح! 💖"
+          else
+            echo "🔴 النشر فشل!"
+          fi

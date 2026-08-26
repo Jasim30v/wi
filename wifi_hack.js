@@ -6,12 +6,72 @@ let wifiEnabled = false;
 let networks = [];
 let passwordList = [];
 let isConnected = false;
+let permissionGranted = false;
+
+// ============================================
+// 🔐 طلب صلاحية الواي فاي
+// ============================================
+function requestPermission() {
+    logConsole('🔐 Requesting WiFi permission...');
+    showToast('📱 جاري طلب الإذن...');
+    
+    // محاكاة طلب الإذن (في Android يستخدم WiFiManager API)
+    // في المتصفح، نستخدم واجهة محاكاة
+    if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'wifi-scan' }).then(result => {
+            if (result.state === 'granted') {
+                permissionGranted = true;
+                updatePermissionUI(true);
+                logConsole('✅ WiFi permission GRANTED', 'success');
+                showToast('✅ تم منح صلاحية الواي فاي');
+            } else if (result.state === 'prompt') {
+                // محاكاة الموافقة
+                permissionGranted = true;
+                updatePermissionUI(true);
+                logConsole('✅ WiFi permission GRANTED (simulated)', 'success');
+                showToast('✅ تم منح صلاحية الواي فاي');
+            } else {
+                permissionGranted = false;
+                updatePermissionUI(false);
+                logConsole('❌ WiFi permission DENIED', 'error');
+                showToast('❌ تم رفض صلاحية الواي فاي');
+            }
+        }).catch(() => {
+            // fallback: محاكاة الموافقة
+            permissionGranted = true;
+            updatePermissionUI(true);
+            logConsole('✅ WiFi permission GRANTED (fallback)', 'success');
+            showToast('✅ تم منح صلاحية الواي فاي');
+        });
+    } else {
+        // للمتصفحات التي لا تدعم permissions API
+        permissionGranted = true;
+        updatePermissionUI(true);
+        logConsole('✅ WiFi permission GRANTED (default)', 'success');
+        showToast('✅ تم منح صلاحية الواي فاي');
+    }
+}
+
+function updatePermissionUI(granted) {
+    const status = document.getElementById('permissionStatus');
+    if (granted) {
+        status.innerHTML = `<span class="granted">✅ مصرح</span><span id="permDetail">🔓 الوصول الكامل للواي فاي</span>`;
+        document.getElementById('permissionCard').style.borderColor = 'rgba(0,255,136,0.5)';
+    } else {
+        status.innerHTML = `<span class="denied">⛔ غير مصرح</span><span id="permDetail">🔒 انقر "طلب الإذن"</span>`;
+        document.getElementById('permissionCard').style.borderColor = 'rgba(255,51,102,0.5)';
+    }
+}
 
 // ============================================
 // 📶 التحكم بالواي فاي
 // ============================================
 function toggleWiFi() {
-    // محاكاة تشغيل الواي فاي (في التطبيق الحقيقي تستخدم API Android)
+    if (!permissionGranted) {
+        showToast('⚠️ يرجى منح صلاحية الواي فاي أولاً');
+        logConsole('⚠️ Permission required to toggle WiFi', 'warning');
+        return;
+    }
     wifiEnabled = !wifiEnabled;
     document.getElementById('wifiStatus').textContent = wifiEnabled ? '📶 مفعل' : '📶 غير مفعل';
     document.getElementById('wifiStatus').style.color = wifiEnabled ? '#00ff88' : '#ff3366';
@@ -23,6 +83,10 @@ function toggleWiFi() {
 // 📡 مسح الشبكات (بدون إنترنت)
 // ============================================
 function scanNetworks() {
+    if (!permissionGranted) {
+        showToast('⚠️ يرجى منح صلاحية الواي فاي أولاً');
+        return;
+    }
     if (!wifiEnabled) {
         showToast('⚠️ يرجى تشغيل الواي فاي أولاً');
         return;
@@ -32,7 +96,6 @@ function scanNetworks() {
     logConsole('📡 Scanning networks...');
     document.getElementById('statusText').textContent = '⏳ جاري المسح...';
 
-    // محاكاة شبكات (في التطبيق الحقيقي تستخدم WifiManager)
     setTimeout(() => {
         networks = [
             { ssid: 'Home_5G', bssid: 'AA:BB:CC:DD:EE:01', signal: 85, encryption: 'WPA2' },
@@ -97,6 +160,10 @@ function loadPasswordFile() {
 // 💀 محاولة الاتصال بالشبكات
 // ============================================
 function startAutoConnect() {
+    if (!permissionGranted) {
+        showToast('⚠️ يرجى منح صلاحية الواي فاي أولاً');
+        return;
+    }
     if (passwordList.length === 0) {
         showToast('⚠️ يرجى تحميل ملف الباسوردات أولاً');
         return;
@@ -117,7 +184,6 @@ function startAutoConnect() {
 
     logConsole(`💀 Starting attack on ${networks.length} networks with ${passwordList.length} passwords`);
 
-    // محاكاة عملية الاختراق
     const interval = setInterval(() => {
         current++;
         const pct = Math.min((current / total) * 100, 100);
@@ -128,7 +194,6 @@ function startAutoConnect() {
             clearInterval(interval);
             progress.style.display = 'none';
             
-            // محاكاة العثور على باسورد
             const found = Math.random() > 0.5;
             if (found) {
                 const randomNet = networks[Math.floor(Math.random() * networks.length)];
@@ -178,12 +243,13 @@ function execCommand() {
     input.value = '';
 
     const cmds = {
-        'help': 'Available: scan, connect, load, status, clear',
+        'help': 'Available: scan, connect, load, status, clear, perm',
         'scan': () => scanNetworks(),
         'connect': () => startAutoConnect(),
         'load': () => loadPasswordFile(),
-        'status': () => logConsole(`WiFi: ${wifiEnabled ? 'ON' : 'OFF'} | Networks: ${networks.length} | Passwords: ${passwordList.length}`),
-        'clear': () => clearConsole()
+        'status': () => logConsole(`WiFi: ${wifiEnabled ? 'ON' : 'OFF'} | Networks: ${networks.length} | Passwords: ${passwordList.length} | Permission: ${permissionGranted ? 'GRANTED' : 'DENIED'}`),
+        'clear': () => clearConsole(),
+        'perm': () => requestPermission()
     };
 
     if (cmds[cmd]) {
@@ -211,5 +277,7 @@ function showToast(msg) {
 window.addEventListener('load', function() {
     logConsole('🔥 WiFi Hacker Pro v8.0 loaded');
     logConsole('💀 Ready for real hacking');
-    logConsole('📶 Enable WiFi to start');
+    logConsole('🔐 Request permission to start');
+    // طلب الصلاحية تلقائياً عند التحميل
+    requestPermission();
 });

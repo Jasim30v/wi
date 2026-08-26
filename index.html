@@ -31,6 +31,20 @@
             </div>
         </div>
 
+        <!-- Permission Status -->
+        <div class="card permission-card" id="permissionCard">
+            <div class="card-header">
+                <h3>🔐 صلاحيات الواي فاي</h3>
+                <button class="btn-action" onclick="requestPermission()"><i class="fas fa-shield-alt"></i> طلب الإذن</button>
+            </div>
+            <div class="card-body">
+                <div class="permission-status" id="permissionStatus">
+                    <span>⛔ غير مصرح</span>
+                    <span id="permDetail">انقر "طلب الإذن"</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Status -->
         <div class="status-bar" id="statusBar">
             <span id="statusText">🔴 غير متصل</span>

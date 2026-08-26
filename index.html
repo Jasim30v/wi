@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#00ff88">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <title>🔥 WiFi Hacker Pro v8.0</title>
+    <title>🔥 WiFi Hacker Pro v9.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -22,10 +23,11 @@
                 <div class="logo">🔥</div>
                 <div class="header-text">
                     <h1>WiFi Hacker Pro</h1>
-                    <span>✦ v8.0 Real Hacking ✦</span>
+                    <span>✦ v9.0 Real Hacking ✦</span>
                 </div>
             </div>
             <div class="header-right">
+                <button class="btn-icon" onclick="connectDevice()" id="btnConnect" title="اتصل بالجهاز (WebUSB/Serial)"><i class="fas fa-usb"></i></button>
                 <button class="btn-icon" onclick="toggleConsole()" id="btnConsole"><i class="fas fa-terminal"></i></button>
                 <button class="btn-icon" onclick="installApp()" id="btnInstall" style="display:none;"><i class="fas fa-download"></i></button>
             </div>
@@ -34,6 +36,7 @@
         <!-- Status -->
         <div class="status-bar" id="statusBar">
             <span id="statusText">🔴 غير متصل</span>
+            <span id="deviceInfo">لا يوجد جهاز</span>
             <span id="wifiStatus">📶 غير مفعل</span>
         </div>
 
@@ -44,8 +47,20 @@
                 <button class="btn-action" onclick="toggleWiFi()"><i class="fas fa-power-off"></i> تشغيل</button>
             </div>
             <div class="card-body">
+                <div class="input-group">
+                    <label>الواجهة</label>
+                    <select id="interface" class="input-field">
+                        <option value="wlan0">wlan0</option>
+                        <option value="wlan1">wlan1</option>
+                        <option value="eth0">eth0</option>
+                    </select>
+                </div>
                 <button class="btn-action full" onclick="scanNetworks()"><i class="fas fa-radar"></i> مسح الشبكات</button>
                 <div class="network-list" id="networkList"></div>
+                <div id="scanProgress" style="display:none;margin-top:6px;">
+                    <div class="progress-bar"><div class="progress-fill" id="scanFill"></div></div>
+                    <span id="scanText" style="font-size:8px;color:var(--text3);">جاري المسح...</span>
+                </div>
             </div>
         </div>
 
@@ -60,11 +75,15 @@
                     <span>📄 لا يوجد ملف محمّل</span>
                     <span id="passwordCount">0 كلمة</span>
                 </div>
+                <div class="password-formats">
+                    <span style="font-size:8px;color:var(--text3);">الصيغ المدعومة: .txt .csv .lst</span>
+                </div>
                 <button class="btn-action full" onclick="startAutoConnect()"><i class="fas fa-link"></i> محاولة الاتصال</button>
                 <div id="attackProgress" style="display:none;">
                     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
                     <span id="progressText">جاري المحاولة...</span>
                 </div>
+                <div id="attackResult" style="display:none;margin-top:6px;padding:8px;border-radius:8px;text-align:center;font-size:11px;"></div>
             </div>
         </div>
 
@@ -75,8 +94,12 @@
                 <button class="btn-action" onclick="clearConsole()">مسح</button>
             </div>
             <div class="console-body" id="consoleBody">
-                <div class="console-line">> 🔥 WiFi Hacker Pro v8.0</div>
-                <div class="console-line">> 💀 جاهز لاختراق الشبكات</div>
+                <div class="console-line">> ═══════════════════════════════════</div>
+                <div class="console-line">> 🔥 WiFi Hacker Pro v9.0</div>
+                <div class="console-line">> 💀 جاهز لاختراق الشبكات الحقيقية</div>
+                <div class="console-line">> 📡 قم بتوصيل جهاز USB أو استخدم Serial</div>
+                <div class="console-line">> 📝 اكتب "help" للأوامر</div>
+                <div class="console-line">> ═══════════════════════════════════</div>
             </div>
             <div class="console-input">
                 <input type="text" id="consoleInput" placeholder="أدخل أمر..." onkeydown="if(event.key==='Enter')execCommand()">
@@ -112,6 +135,14 @@
                 });
             }
         }
+
+        // كشف الحالة عبر الإنترنت
+        window.addEventListener('online', function() {
+            document.getElementById('statusText').textContent = '🌐 متصل بالإنترنت';
+        });
+        window.addEventListener('offline', function() {
+            document.getElementById('statusText').textContent = '📴 غير متصل - يعمل محلياً';
+        });
     </script>
 
     <script src="storage.js"></script>

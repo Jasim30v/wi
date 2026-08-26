@@ -2,176 +2,168 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#00ff88">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <title>🔥 WiFi Hacker Pro v8.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>📡 WiFi Analyzer Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="bg-void"></div>
+    <div class="bg-grid"></div>
     <div id="particlesContainer"></div>
 
     <div class="app">
         <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <div class="logo">🔥</div>
+                <div class="logo">📡</div>
                 <div class="header-text">
-                    <h1>WiFi Hacker Pro</h1>
-                    <span>✦ v8.0 Real Hacking ✦</span>
+                    <h1>WiFi Analyzer Pro</h1>
+                    <span>✦ Network Intelligence ✦</span>
                 </div>
             </div>
             <div class="header-right">
-                <button class="btn-icon" onclick="toggleConsole()" id="btnConsole"><i class="fas fa-terminal"></i></button>
-                <button class="btn-icon" onclick="installApp()" id="btnInstall" style="display:none;"><i class="fas fa-download"></i></button>
+                <button class="btn-icon" onclick="toggleSpeedTest()" id="btnSpeed"><i class="fas fa-gauge-high"></i></button>
+                <button class="btn-icon" onclick="toggleSecurity()" id="btnSecurity"><i class="fas fa-shield-halved"></i></button>
+                <button class="btn-icon" onclick="refreshNetworks()" id="btnRefresh"><i class="fas fa-rotate"></i></button>
             </div>
         </div>
 
-        <!-- Permission Status -->
-        <div class="card permission-card" id="permissionCard">
-            <div class="card-header">
-                <h3>🔐 صلاحيات الواي فاي</h3>
-                <button class="btn-action" onclick="requestPermission()"><i class="fas fa-shield-alt"></i> طلب الإذن</button>
+        <!-- Network Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="color:#00ffcc"><i class="fas fa-wifi"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalNetworks">0</div>
+                    <div class="stat-label">شبكة مكتشفة</div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="permission-status" id="permissionStatus">
-                    <span>⛔ غير مصرح</span>
-                    <span id="permDetail">انقر "طلب الإذن"</span>
+            <div class="stat-card">
+                <div class="stat-icon" style="color:#ff44aa"><i class="fas fa-signal"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="avgSignal">0%</div>
+                    <div class="stat-label">متوسط الإشارة</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="color:#ffaa00"><i class="fas fa-lock"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="secureNetworks">0</div>
+                    <div class="stat-label">شبكة آمنة</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="color:#6366f1"><i class="fas fa-tower-broadcast"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="bestChannel">-</div>
+                    <div class="stat-label">أفضل قناة</div>
                 </div>
             </div>
         </div>
 
-        <!-- Status -->
-        <div class="status-bar" id="statusBar">
-            <span id="statusText">🔴 غير متصل</span>
-            <span id="wifiStatus">📶 غير مفعل</span>
-        </div>
-
-        <!-- WiFi Control -->
-        <div class="card">
-            <div class="card-header">
-                <h3>📶 التحكم بالواي فاي</h3>
-                <button class="btn-action" onclick="toggleWiFi()"><i class="fas fa-power-off"></i> تشغيل</button>
-            </div>
-            <div class="card-body">
-                <button class="btn-action full" onclick="scanNetworks()"><i class="fas fa-radar"></i> مسح الشبكات الحقيقية</button>
-                <div class="network-list" id="networkList"></div>
-            </div>
-        </div>
-
-        <!-- Password File -->
-        <div class="card">
-            <div class="card-header">
-                <h3>🔑 ملف الباسوردات</h3>
-                <button class="btn-action" onclick="loadPasswordFile()"><i class="fas fa-upload"></i> تحميل</button>
-            </div>
-            <div class="card-body">
-                <div class="password-info" id="passwordInfo">
-                    <span>📄 لا يوجد ملف محمّل</span>
-                    <span id="passwordCount">0 كلمة</span>
-                </div>
-                <button class="btn-action full" onclick="startAutoConnect()"><i class="fas fa-link"></i> محاولة الاتصال</button>
-                <div id="attackProgress" style="display:none;">
-                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-                    <span id="progressText">جاري المحاولة...</span>
+        <!-- Signal Visualizer -->
+        <div class="visualizer-section">
+            <div class="viz-header">
+                <h3>📊 تحليل الإشارات</h3>
+                <div class="viz-legend">
+                    <span><i class="fas fa-circle" style="color:#00ffcc;font-size:8px"></i> ممتاز</span>
+                    <span><i class="fas fa-circle" style="color:#ffaa00;font-size:8px"></i> متوسط</span>
+                    <span><i class="fas fa-circle" style="color:#ff4444;font-size:8px"></i> ضعيف</span>
                 </div>
             </div>
-        </div>
-
-        <!-- Console -->
-        <div class="console" id="consolePanel" style="display:none;">
-            <div class="console-header">
-                <span>🖥️ Terminal</span>
-                <button class="btn-action" onclick="clearConsole()">مسح</button>
-            </div>
-            <div class="console-body" id="consoleBody">
-                <div class="console-line">> 🔥 WiFi Hacker Pro v8.0</div>
-                <div class="console-line">> 💀 جاهز لاختراق الشبكات</div>
-            </div>
-            <div class="console-input">
-                <input type="text" id="consoleInput" placeholder="أدخل أمر..." onkeydown="if(event.key==='Enter')execCommand()">
-                <button onclick="execCommand()"><i class="fas fa-arrow-left"></i></button>
+            <div class="signal-graph" id="signalGraph">
+                <canvas id="signalCanvas"></canvas>
             </div>
         </div>
 
-        <div class="toast" id="toast"></div>
+        <!-- Channel Analysis -->
+        <div class="channel-section">
+            <div class="channel-header">
+                <h3>📡 تحليل القنوات</h3>
+                <span id="channelRecommendation" class="recommendation-badge"></span>
+            </div>
+            <div class="channel-graph" id="channelGraph">
+                <div class="channel-bars" id="channelBars"></div>
+            </div>
+        </div>
+
+        <!-- Speed Test Panel -->
+        <div class="speed-panel" id="speedPanel" style="display:none">
+            <div class="speed-header">
+                <h3>🚀 اختبار السرعة</h3>
+                <button class="btn-action" onclick="startSpeedTest()" id="btnStartTest">
+                    <i class="fas fa-play"></i> بدء الاختبار
+                </button>
+            </div>
+            <div class="speed-results">
+                <div class="speed-metric">
+                    <div class="speed-value" id="downloadSpeed">0</div>
+                    <div class="speed-unit">Mbps</div>
+                    <div class="speed-label">⬇️ التحميل</div>
+                </div>
+                <div class="speed-metric">
+                    <div class="speed-value" id="uploadSpeed">0</div>
+                    <div class="speed-unit">Mbps</div>
+                    <div class="speed-label">⬆️ الرفع</div>
+                </div>
+                <div class="speed-metric">
+                    <div class="speed-value" id="pingValue">0</div>
+                    <div class="speed-unit">ms</div>
+                    <div class="speed-label">📡 البينغ</div>
+                </div>
+            </div>
+            <div class="speed-progress">
+                <div class="speed-progress-bar" id="speedProgressBar"></div>
+            </div>
+        </div>
+
+        <!-- Security Panel -->
+        <div class="security-panel" id="securityPanel" style="display:none">
+            <div class="security-header">
+                <h3>🔐 تحليل الأمان</h3>
+                <span id="securityScore" class="security-score"></span>
+            </div>
+            <div class="security-checks" id="securityChecks"></div>
+        </div>
+
+        <!-- Network List -->
+        <div class="networks-section">
+            <div class="networks-header">
+                <h3>📶 الشبكات المكتشفة</h3>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterNetworks('all', this)">الكل</button>
+                    <button class="filter-btn" onclick="filterNetworks('secure', this)">آمنة</button>
+                    <button class="filter-btn" onclick="filterNetworks('open', this)">مفتوحة</button>
+                    <button class="filter-btn" onclick="filterNetworks('5g', this)">5GHz</button>
+                </div>
+            </div>
+            <div class="networks-list" id="networksList">
+                <div class="empty-networks">
+                    <span>📡</span>
+                    <p>جارٍ البحث عن الشبكات...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js')
-                    .then(function(reg) { console.log('[SW] Registered'); })
-                    .catch(function(err) { console.log('[SW] Failed'); });
-            });
-        }
+    <!-- Network Details Modal -->
+    <div class="modal" id="networkModal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">تفاصيل الشبكة</h3>
+                <button class="btn-close" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
 
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', function(e) {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('btnInstall').style.display = 'flex';
-        });
+    <div class="toast" id="toast"></div>
 
-        function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(function(result) {
-                    deferredPrompt = null;
-                    document.getElementById('btnInstall').style.display = 'none';
-                });
-            }
-        }
-
-        // ============================================
-        // 🔥 Bridge to Android WifiManager
-        // ============================================
-        let wifiBridge = null;
-        try {
-            wifiBridge = AndroidWifi; // يتم حقنه من WebView
-        } catch(e) {
-            console.log('[Bridge] AndroidWifi not available - using fallback');
-        }
-
-        function getRealNetworks() {
-            return new Promise((resolve) => {
-                if (wifiBridge && wifiBridge.scanNetworks) {
-                    try {
-                        const result = wifiBridge.scanNetworks();
-                        resolve(JSON.parse(result));
-                    } catch(e) {
-                        console.error('[Bridge] Error scanning:', e);
-                        resolve([]);
-                    }
-                } else {
-                    console.log('[Bridge] Using fallback networks');
-                    resolve([]);
-                }
-            });
-        }
-
-        function toggleRealWiFi() {
-            if (wifiBridge && wifiBridge.toggleWiFi) {
-                return wifiBridge.toggleWiFi() === 'true';
-            }
-            return false;
-        }
-
-        function getRealWiFiState() {
-            if (wifiBridge && wifiBridge.isWiFiEnabled) {
-                return wifiBridge.isWiFiEnabled() === 'true';
-            }
-            return false;
-        }
-    </script>
-
-    <script src="storage.js"></script>
-    <script src="particles.js"></script>
-    <script src="wifi_hack.js"></script>
+    <script src="scanner.js"></script>
+    <script src="visualizer.js"></script>
+    <script src="speedtest.js"></script>
+    <script src="security.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

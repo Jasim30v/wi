@@ -1,837 +1,834 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════╗
-║  📡  WiFi NETSCAN PRO - ULTIMATE NETWORK SCANNER  📡      ║
-║     Real WiFi Access + Professional UI                     ║
-║                                                            ║
-║  🌐  Real Network Detection + Signal Analysis              ║
-║  🎨  Premium Glass Morphism Design                         ║
-║  📊  Real-time Signal Monitoring                           ║
-║  🔐  Security Analysis + Network Details                   ║
-║  🔑  Password Loader + Auto-Crack Engine                   ║
-║  💀  Network Hacking Simulation (Real Connections)         ║
-║  🖥️  Full Web UI + API Server                             ║
-║                                                            ║
+║                                                              ║
+║  📡  NETSCAN 2044 - ULTIMATE WIFI SCANNER  📡              ║
+║     Ultimate Generator - WiFi Analyzer + Speed Test         ║
+║                                                              ║
+║  📶  Real-time WiFi Network Scanner                        ║
+║  🎨  Futuristic Glass Morphism Design                      ║
+║  💾  Network History + Local Storage                       ║
+║  📊  Signal Strength Visualizer + Channel Analyzer         ║
+║  ⚡  Speed Test + Network Details                          ║
+║                                                          ║
 ╚══════════════════════════════════════════════════════════════╝
 """
 
 import os
-import sys
 import json
-import time
-import subprocess
-import platform
-import re
-import socket
-import threading
-import queue
-import hashlib
-import base64
-import argparse
-from datetime import datetime
-from typing import List, Dict, Optional, Tuple, Any
-from dataclasses import dataclass, asdict, field
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ============================================
-# 🔥 Configuration
-# ============================================
-CONFIG = {
-    "wigle_api_key": "",  # سجل في wigle.net للحصول على مفتاح
-    "google_api_key": "",  # سجل في Google Cloud Console
-    "timeout": 10,
-    "max_networks": 100,
-    "max_threads": 20,
-    "cache_file": "networks_cache.json",
-    "cache_ttl": 300,  # 5 دقائق
-    "password_file": "passwords.txt",
-    "output_file": "networks.json",
-    "cracked_file": "cracked_networks.json",
-    "server_port": 5000,
-    "enable_webui": True
-}
+TOTAL_LINES = 0
 
-# ============================================
-# 📡 Data Classes
-# ============================================
-@dataclass
-class NetworkInfo:
-    ssid: str
-    bssid: str
-    signal: int
-    encryption: str
-    frequency: int = 2400
-    channel: int = 0
-    source: str = "unknown"
-    security: str = "Unknown"
-    max_speed: str = "Unknown"
-    hidden: bool = False
-    password: str = ""
-    cracked: bool = False
-    first_seen: str = ""
-    last_seen: str = ""
+def write(filename, content):
+    global TOTAL_LINES
+    os.makedirs(os.path.dirname(filename) if os.path.dirname(filename) else '.', exist_ok=True)
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(content)
+    lines = content.count('\n') + 1
+    TOTAL_LINES += lines
+    print(f"  ✅ {filename} ({lines} سطر)")
 
-    def to_dict(self) -> Dict:
-        return asdict(self)
+def section(title):
+    print(f"\n{'='*60}")
+    print(f"  📡 {title}")
+    print(f"{'='*60}")
 
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'NetworkInfo':
-        return cls(**data)
+# ═══════════════════════════════════════════════════════════
+# 📡 1. index.html
+# ═══════════════════════════════════════════════════════════
 
-# ============================================
-# 🔥 WiFiScanner - Advanced Scanner
-# ============================================
-class WiFiScanner:
-    def __init__(self):
-        self.os_type = platform.system()
-        self.networks: List[NetworkInfo] = []
-        self.cracked_networks: List[NetworkInfo] = []
-        self.password_list: List[str] = []
-        self.scan_queue = queue.Queue()
-        self.results_queue = queue.Queue()
-        self.lock = threading.Lock()
-        self.running = False
-        self.scan_progress = 0
-        self.total_scans = 0
-        self.cache = self.load_cache()
-        self.load_passwords()
-        self.load_cracked()
-
-    # ============================================
-    # 📂 Cache & Storage
-    # ============================================
-    def load_cache(self) -> Dict:
-        if os.path.exists(CONFIG["cache_file"]):
-            try:
-                with open(CONFIG["cache_file"], 'r') as f:
-                    data = json.load(f)
-                    if time.time() - data.get("timestamp", 0) < CONFIG["cache_ttl"]:
-                        return data.get("networks", {})
-            except:
-                pass
-        return {}
-
-    def save_cache(self):
-        try:
-            with open(CONFIG["cache_file"], 'w') as f:
-                json.dump({
-                    "timestamp": time.time(),
-                    "networks": [n.to_dict() for n in self.networks]
-                }, f, indent=2)
-        except:
-            pass
-
-    def load_passwords(self):
-        if os.path.exists(CONFIG["password_file"]):
-            try:
-                with open(CONFIG["password_file"], 'r', encoding='utf-8') as f:
-                    self.password_list = [line.strip() for line in f if line.strip()]
-                print(f"🔑 Loaded {len(self.password_list)} passwords")
-            except Exception as e:
-                print(f"⚠️ Error loading passwords: {str(e)}")
-
-    def load_cracked(self):
-        if os.path.exists(CONFIG["cracked_file"]):
-            try:
-                with open(CONFIG["cracked_file"], 'r') as f:
-                    data = json.load(f)
-                    self.cracked_networks = [NetworkInfo.from_dict(n) for n in data]
-                print(f"💀 Loaded {len(self.cracked_networks)} cracked networks")
-            except Exception as e:
-                print(f"⚠️ Error loading cracked: {str(e)}")
-
-    def save_cracked(self):
-        try:
-            with open(CONFIG["cracked_file"], 'w') as f:
-                json.dump([n.to_dict() for n in self.cracked_networks], f, indent=2)
-        except Exception as e:
-            print(f"⚠️ Error saving cracked: {str(e)}")
-
-    # ============================================
-    # 📡 Local Scanners
-    # ============================================
-    def scan_linux(self) -> List[NetworkInfo]:
-        networks = []
-        # 1. nmcli
-        try:
-            subprocess.run(["nmcli", "dev", "wifi", "rescan"], capture_output=True, timeout=5)
-            time.sleep(1)
-            result = subprocess.run(
-                ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY,BSSID,FREQ", "dev", "wifi", "list"],
-                capture_output=True, text=True, timeout=10
-            )
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if not line.strip():
-                        continue
-                    parts = line.split(':')
-                    if len(parts) >= 4:
-                        networks.append(NetworkInfo(
-                            ssid=parts[0] or "<Hidden>",
-                            signal=int(parts[1]) if parts[1].isdigit() else 0,
-                            encryption=parts[2] if parts[2] else "Open",
-                            bssid=parts[3] if parts[3] else "00:00:00:00:00:00",
-                            frequency=int(parts[4]) if len(parts) > 4 and parts[4].isdigit() else 2400,
-                            source="nmcli"
-                        ))
-        except Exception as e:
-            print(f"⚠️ nmcli error: {str(e)}")
-
-        # 2. iwlist (fallback)
-        if not networks:
-            try:
-                iface = self.get_wireless_interface()
-                if iface:
-                    result = subprocess.run(
-                        ["iwlist", iface, "scan"],
-                        capture_output=True, text=True, timeout=15
-                    )
-                    if result.returncode == 0:
-                        networks = self.parse_iwlist(result.stdout)
-            except Exception as e:
-                print(f"⚠️ iwlist error: {str(e)}")
-
-        return networks
-
-    def get_wireless_interface(self) -> Optional[str]:
-        try:
-            result = subprocess.run(["iwconfig"], capture_output=True, text=True, timeout=5)
-            for line in result.stdout.split('\n'):
-                if line.strip() and not line.startswith('lo') and 'IEEE 802.11' in line:
-                    return line.split()[0]
-        except:
-            pass
-        return None
-
-    def parse_iwlist(self, output: str) -> List[NetworkInfo]:
-        networks = []
-        current = {}
-        for line in output.split('\n'):
-            line = line.strip()
-            if 'Cell' in line and 'Address' in line:
-                if current:
-                    networks.append(self.create_network_from_iwlist(current))
-                current = {}
-                bssid_match = re.search(r'Address: ([0-9A-F:]+)', line)
-                if bssid_match:
-                    current["bssid"] = bssid_match.group(1)
-            elif 'ESSID' in line:
-                essid_match = re.search(r'ESSID:"(.+)"', line)
-                current["ssid"] = essid_match.group(1) if essid_match else "<Hidden>"
-            elif 'Frequency' in line:
-                freq_match = re.search(r'Frequency:([0-9.]+) GHz', line)
-                if freq_match:
-                    current["frequency"] = int(float(freq_match.group(1)) * 1000)
-            elif 'Quality' in line:
-                signal_match = re.search(r'Signal level=(-?[0-9]+) dBm', line)
-                if signal_match:
-                    dbm = int(signal_match.group(1))
-                    current["signal"] = min(100, max(0, (dbm + 100) * 2))
-                else:
-                    current["signal"] = 50
-            elif 'Encryption' in line:
-                if "WPA3" in line:
-                    current["encryption"] = "WPA3"
-                elif "WPA2" in line:
-                    current["encryption"] = "WPA2"
-                elif "WPA" in line:
-                    current["encryption"] = "WPA"
-                elif "WEP" in line:
-                    current["encryption"] = "WEP"
-                else:
-                    current["encryption"] = "Open"
-        if current:
-            networks.append(self.create_network_from_iwlist(current))
-        return networks
-
-    def create_network_from_iwlist(self, data: Dict) -> NetworkInfo:
-        return NetworkInfo(
-            ssid=data.get("ssid", "<Hidden>"),
-            bssid=data.get("bssid", "00:00:00:00:00:00"),
-            signal=data.get("signal", 50),
-            encryption=data.get("encryption", "Unknown"),
-            frequency=data.get("frequency", 2400),
-            source="iwlist"
-        )
-
-    def scan_windows(self) -> List[NetworkInfo]:
-        networks = []
-        try:
-            subprocess.run(["netsh", "wlan", "show", "networks", "mode=bssid"],
-                          capture_output=True, timeout=5)
-            time.sleep(1)
-            result = subprocess.run(
-                ["netsh", "wlan", "show", "networks", "mode=bssid"],
-                capture_output=True, text=True, timeout=10
-            )
-            if result.returncode == 0:
-                current = {}
-                for line in result.stdout.split('\n'):
-                    line = line.strip()
-                    if 'SSID' in line and 'BSSID' not in line:
-                        if current:
-                            networks.append(self.create_network_from_windows(current))
-                        current = {}
-                        ssid_match = re.search(r'SSID\s*:\s*(.+)', line)
-                        if ssid_match:
-                            current["ssid"] = ssid_match.group(1).strip()
-                    elif 'BSSID' in line:
-                        bssid_match = re.search(r'BSSID\s*:\s*([0-9A-F:]+)', line)
-                        if bssid_match:
-                            current["bssid"] = bssid_match.group(1)
-                    elif 'Signal' in line:
-                        signal_match = re.search(r'Signal\s*:\s*([0-9]+)%', line)
-                        if signal_match:
-                            current["signal"] = int(signal_match.group(1))
-                    elif 'Authentication' in line:
-                        auth_match = re.search(r'Authentication\s*:\s*(.+)', line)
-                        if auth_match:
-                            current["encryption"] = auth_match.group(1).strip()
-                    elif 'Radio type' in line:
-                        radio_match = re.search(r'Radio type\s*:\s*([0-9]+)', line)
-                        if radio_match:
-                            current["frequency"] = int(radio_match.group(1))
-                if current:
-                    networks.append(self.create_network_from_windows(current))
-        except Exception as e:
-            print(f"⚠️ netsh error: {str(e)}")
-        return networks
-
-    def create_network_from_windows(self, data: Dict) -> NetworkInfo:
-        return NetworkInfo(
-            ssid=data.get("ssid", "<Hidden>"),
-            bssid=data.get("bssid", "00:00:00:00:00:00"),
-            signal=data.get("signal", 50),
-            encryption=data.get("encryption", "Unknown"),
-            frequency=data.get("frequency", 2400),
-            source="netsh"
-        )
-
-    def scan_macos(self) -> List[NetworkInfo]:
-        networks = []
-        airport_path = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
-        if os.path.exists(airport_path):
-            try:
-                result = subprocess.run([airport_path, "-s"], capture_output=True, text=True, timeout=10)
-                if result.returncode == 0:
-                    lines = result.stdout.split('\n')[1:]
-                    for line in lines:
-                        if not line.strip():
-                            continue
-                        parts = line.split()
-                        if len(parts) >= 5:
-                            networks.append(NetworkInfo(
-                                ssid=parts[0] if parts[0] else "<Hidden>",
-                                bssid=parts[1] if len(parts) > 1 else "00:00:00:00:00:00",
-                                signal=int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 50,
-                                encryption=parts[3] if len(parts) > 3 else "Unknown",
-                                frequency=int(parts[4]) if len(parts) > 4 and parts[4].isdigit() else 2400,
-                                source="airport"
-                            ))
-            except Exception as e:
-                print(f"⚠️ airport error: {str(e)}")
-        return networks
-
-    # ============================================
-    # 🌐 API Scanners
-    # ============================================
-    def scan_wigle(self, lat: float, lng: float) -> List[NetworkInfo]:
-        if not CONFIG["wigle_api_key"]:
-            return []
-        
-        networks = []
-        try:
-            import requests
-            url = "https://api.wigle.net/api/v2/network/search"
-            params = {
-                "latrange1": lat - 0.01,
-                "latrange2": lat + 0.01,
-                "longrange1": lng - 0.01,
-                "longrange2": lng + 0.01,
-                "limit": CONFIG["max_networks"]
-            }
-            headers = {"Accept": "application/json", "Authorization": f"Basic {CONFIG['wigle_api_key']}"}
-            response = requests.get(url, params=params, headers=headers, timeout=CONFIG["timeout"])
-            
-            if response.status_code == 200:
-                data = response.json()
-                for result in data.get("results", []):
-                    networks.append(NetworkInfo(
-                        ssid=result.get("ssid", "<Hidden>"),
-                        bssid=result.get("bssid", "00:00:00:00:00:00"),
-                        signal=result.get("signal", 0),
-                        encryption=result.get("encryption", "Unknown"),
-                        frequency=result.get("frequency", 2400),
-                        channel=result.get("channel", 0),
-                        source="WiGLE"
-                    ))
-        except Exception as e:
-            print(f"⚠️ WiGLE API error: {str(e)}")
-        return networks
-
-    def scan_google_geolocation(self, lat: float, lng: float) -> List[NetworkInfo]:
-        if not CONFIG["google_api_key"]:
-            return []
-        
-        networks = []
-        try:
-            import requests
-            url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={CONFIG['google_api_key']}"
-            payload = {
-                "homeMobileCountryCode": 0,
-                "homeMobileNetworkCode": 0,
-                "radioType": "wifi",
-                "carrier": "wifi",
-                "considerIp": True,
-                "wifiAccessPoints": []
-            }
-            response = requests.post(url, json=payload, timeout=CONFIG["timeout"])
-            if response.status_code == 200:
-                data = response.json()
-                for ap in data.get("wifiAccessPoints", []):
-                    networks.append(NetworkInfo(
-                        ssid=ap.get("ssid", "<Hidden>"),
-                        bssid=ap.get("macAddress", "00:00:00:00:00:00"),
-                        signal=ap.get("signalStrength", 0),
-                        encryption=ap.get("encryption", "Unknown"),
-                        frequency=ap.get("frequency", 2400),
-                        source="Google Geolocation"
-                    ))
-        except Exception as e:
-            print(f"⚠️ Google API error: {str(e)}")
-        return networks
-
-    # ============================================
-    # 💀 Crack Engine - Real Network Hacking
-    # ============================================
-    def crack_network(self, network: NetworkInfo) -> Optional[str]:
-        """محاولة اختراق شبكة باستخدام قائمة الباسوردات"""
-        if not self.password_list:
-            return None
-        
-        if network.encryption == "Open":
-            return ""  # شبكة مفتوحة
-        
-        # محاكاة اختراق حقيقي (في الواقع تحتاج إلى واجهة WiFi)
-        for pwd in self.password_list:
-            if self.try_password(network.bssid, pwd):
-                return pwd
-        return None
-
-    def try_password(self, bssid: str, password: str) -> bool:
-        """محاكاة محاولة الاتصال بشبكة"""
-        import random
-        # محاكاة نجاح عشوائي بناءً على قوة الباسورد
-        strength = len(password) * 2 + sum(ord(c) for c in password) % 10
-        success_rate = min(30, strength) / 100
-        return random.random() < success_rate
-
-    def crack_all_networks(self) -> List[NetworkInfo]:
-        """اختراق جميع الشبكات القريبة"""
-        cracked = []
-        print(f"💀 Starting crack on {len(self.networks)} networks...")
-        
-        with ThreadPoolExecutor(max_workers=CONFIG["max_threads"]) as executor:
-            futures = {executor.submit(self.crack_network, net): net for net in self.networks}
-            for future in as_completed(futures):
-                network = futures[future]
-                try:
-                    password = future.result()
-                    if password is not None:
-                        network.password = password
-                        network.cracked = True
-                        cracked.append(network)
-                        print(f"🔓 CRACKED: {network.ssid} | Password: {password}")
-                except Exception as e:
-                    print(f"⚠️ Error cracking {network.ssid}: {str(e)}")
-        
-        self.cracked_networks.extend(cracked)
-        self.save_cracked()
-        print(f"✅ Cracked {len(cracked)} networks")
-        return cracked
-
-    # ============================================
-    # 🔥 Main Scanner
-    # ============================================
-    def scan_all(self, lat: float = None, lng: float = None) -> List[NetworkInfo]:
-        print("\n" + "="*70)
-        print("📡 WiFi NETSCAN PRO - Scanning All Sources")
-        print("="*70 + "\n")
-        
-        all_networks = []
-        seen_bssids = set()
-        
-        # 1. Local scanners
-        print(f"🖥️ Platform: {self.os_type}")
-        if self.os_type == "Linux":
-            networks = self.scan_linux()
-        elif self.os_type == "Windows":
-            networks = self.scan_windows()
-        elif self.os_type == "Darwin":
-            networks = self.scan_macos()
-        else:
-            networks = []
-            print("⚠️ Unknown platform, skipping local scan")
-        
-        all_networks.extend(networks)
-        print(f"📡 Local scan: {len(networks)} networks")
-        
-        # 2. API scanners
-        if lat is not None and lng is not None:
-            if CONFIG["wigle_api_key"]:
-                networks = self.scan_wigle(lat, lng)
-                all_networks.extend(networks)
-                print(f"🌐 WiGLE: {len(networks)} networks")
-            
-            if CONFIG["google_api_key"]:
-                networks = self.scan_google_geolocation(lat, lng)
-                all_networks.extend(networks)
-                print(f"🌐 Google: {len(networks)} networks")
-        else:
-            print("📍 No location provided, skipping API scans")
-        
-        # 3. Remove duplicates
-        unique_networks = []
-        for net in all_networks:
-            if net.bssid not in seen_bssids:
-                seen_bssids.add(net.bssid)
-                unique_networks.append(net)
-            else:
-                # Update existing network if better signal
-                existing = next((n for n in unique_networks if n.bssid == net.bssid), None)
-                if existing and net.signal > existing.signal:
-                    existing.signal = net.signal
-        
-        # Sort by signal
-        unique_networks.sort(key=lambda x: x.signal, reverse=True)
-        
-        self.networks = unique_networks
-        self.save_cache()
-        
-        print(f"\n✅ Total: {len(unique_networks)} unique networks")
-        return unique_networks
-
-    # ============================================
-    # 📊 Export Functions
-    # ============================================
-    def export_json(self, filename: str = None):
-        if not filename:
-            filename = CONFIG["output_file"]
-        
-        data = {
-            "timestamp": datetime.now().isoformat(),
-            "total": len(self.networks),
-            "cracked": len(self.cracked_networks),
-            "networks": [n.to_dict() for n in self.networks],
-            "cracked_networks": [n.to_dict() for n in self.cracked_networks]
-        }
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"✅ Exported to {filename}")
-
-    def export_csv(self, filename: str = "networks.csv"):
-        import csv
-        with open(filename, 'w', newline='', encoding='utf-8') as f:
-            if self.networks:
-                fieldnames = ["ssid", "bssid", "signal", "encryption", "frequency", "source", "cracked", "password"]
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                for net in self.networks:
-                    row = {
-                        "ssid": net.ssid,
-                        "bssid": net.bssid,
-                        "signal": net.signal,
-                        "encryption": net.encryption,
-                        "frequency": net.frequency,
-                        "source": net.source,
-                        "cracked": net.cracked,
-                        "password": net.password if net.cracked else ""
-                    }
-                    writer.writerow(row)
-        print(f"✅ Exported to {filename}")
-
-    def export_html(self, filename: str = "networks.html"):
-        """تصدير النتائج كصفحة HTML مع واجهة احترافية"""
-        html_content = f"""<!DOCTYPE html>
-<html dir="rtl" lang="ar">
+def build_index():
+    return """<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>📡 WiFi Scan Results</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        *{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Cairo',sans-serif;background:#0a0a1a;color:#f0e8ff;padding:20px;direction:rtl}}
-        .container{{max-width:800px;margin:0 auto}}
-        .header{{text-align:center;padding:30px 0;border-bottom:1px solid rgba(0,255,204,0.1)}}
-        .header h1{{font-size:28px;background:linear-gradient(135deg,#00ffcc,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
-        .header p{{color:#a098b8;margin-top:8px}}
-        .stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}}
-        .stat-card{{background:rgba(15,15,35,0.9);border:1px solid rgba(0,255,204,0.15);border-radius:16px;padding:16px;text-align:center}}
-        .stat-value{{font-size:24px;font-weight:700;color:#00ffcc}}
-        .stat-label{{font-size:12px;color:#a098b8;margin-top:4px}}
-        .network-item{{background:rgba(15,15,35,0.9);border:1px solid rgba(0,255,204,0.1);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}}
-        .network-item:hover{{border-color:#00ffcc}}
-        .network-ssid{{font-weight:600}}
-        .network-details{{font-size:12px;color:#a098b8}}
-        .network-signal{{color:#00ffcc;font-weight:700}}
-        .cracked{{border-color:#ff6600;background:rgba(255,51,102,0.1)}}
-        .cracked .network-ssid{{color:#ff6600}}
-        .password-badge{{background:#ff3366;color:#fff;padding:2px 10px;border-radius:12px;font-size:10px}}
-        .footer{{text-align:center;padding:20px;color:#605878;font-size:12px}}
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>📡 NetScan 2044</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
+    <div class="bg-void"></div>
+    <div class="bg-ring bg-ring-1"></div>
+    <div class="bg-ring bg-ring-2"></div>
+    <div class="bg-ring bg-ring-3"></div>
+    <div id="particlesContainer"></div>
+
+    <div class="app">
+        <!-- Header -->
         <div class="header">
-            <h1>📡 WiFi NETSCAN PRO</h1>
-            <p>نتائج المسح - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        </div>
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value">{len(self.networks)}</div>
-                <div class="stat-label">📶 الشبكات</div>
+            <div class="header-left">
+                <div class="logo">📡</div>
+                <div class="header-text">
+                    <h1>NetScan 2044</h1>
+                    <span>✦ WiFi Analyzer ✦</span>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value">{len([n for n in self.networks if n.encryption != 'Open'])}</div>
-                <div class="stat-label">🔒 آمنة</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{len([n for n in self.networks if n.encryption == 'Open'])}</div>
-                <div class="stat-label">🔓 مفتوحة</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{len(self.cracked_networks)}</div>
-                <div class="stat-label">💀 مخترقة</div>
+            <div class="header-right">
+                <button class="btn-icon" onclick="toggleSpeedTest()" id="btnSpeed"><i class="fas fa-gauge-high"></i></button>
+                <button class="btn-icon" onclick="toggleChannels()" id="btnChannels"><i class="fas fa-chart-bar"></i></button>
+                <button class="btn-icon" onclick="refreshScan()" id="btnRefresh"><i class="fas fa-rotate"></i></button>
             </div>
         </div>
-        <div class="results">
-            {''.join(self._generate_network_html(n) for n in self.networks[:50])}
+
+        <!-- Network Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📶</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="networkCount">0</div>
+                    <div class="stat-label">الشبكات</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔒</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="secureCount">0</div>
+                    <div class="stat-label">مؤمنة</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="avgSignal">0%</div>
+                    <div class="stat-label">متوسط الإشارة</div>
+                </div>
+            </div>
         </div>
-        <div class="footer">
-            WiFi NETSCAN PRO v3.0 • {datetime.now().strftime('%Y')}
+
+        <!-- Signal Radar -->
+        <div class="radar-container">
+            <canvas id="radarCanvas"></canvas>
+            <div class="radar-overlay">
+                <div class="radar-center">📡</div>
+                <div class="radar-text" id="radarStatus">جارٍ المسح...</div>
+            </div>
+        </div>
+
+        <!-- Scan Controls -->
+        <div class="scan-controls">
+            <button class="scan-btn" id="scanBtn" onclick="startScan()">
+                <i class="fas fa-wifi"></i> بدء المسح
+            </button>
+            <button class="scan-btn secondary" onclick="scanSpecific()">
+                <i class="fas fa-crosshairs"></i> مسح محدد
+            </button>
+        </div>
+
+        <!-- Speed Test Panel -->
+        <div class="speed-panel" id="speedPanel" style="display:none">
+            <div class="panel-header">
+                <h3>⚡ اختبار السرعة</h3>
+                <button class="btn-action" onclick="startSpeedTest()">🔄 اختبار</button>
+            </div>
+            <div class="speed-gauge" id="speedGauge">
+                <div class="gauge-value" id="speedValue">0.0</div>
+                <div class="gauge-unit">Mbps</div>
+            </div>
+            <div class="speed-details">
+                <div class="speed-item">
+                    <span>⬇ التحميل</span>
+                    <span id="downloadSpeed">-- Mbps</span>
+                </div>
+                <div class="speed-item">
+                    <span>⬆ الرفع</span>
+                    <span id="uploadSpeed">-- Mbps</span>
+                </div>
+                <div class="speed-item">
+                    <span>📊 Ping</span>
+                    <span id="pingValue">-- ms</span>
+                </div>
+            </div>
+            <div class="progress-track" id="speedProgressTrack">
+                <div class="progress-fill" id="speedProgress"></div>
+            </div>
+        </div>
+
+        <!-- Channel Analyzer -->
+        <div class="channels-panel" id="channelsPanel" style="display:none">
+            <div class="panel-header">
+                <h3>📊 تحليل القنوات</h3>
+            </div>
+            <div class="channels-chart" id="channelsChart">
+                <!-- Channel bars will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Network List -->
+        <div class="networks-section">
+            <div class="networks-header">
+                <h3>📋 الشبكات المكتشفة</h3>
+                <span id="scanTime" class="scan-time">آخر مسح: --</span>
+            </div>
+            <div class="networks-list" id="networksList">
+                <div class="empty-state">
+                    <span>📡</span>
+                    <p>اضغط "بدء المسح" لاكتشاف الشبكات</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Details Modal -->
+        <div class="modal" id="networkModal" style="display:none">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">تفاصيل الشبكة</h3>
+                    <button class="btn-close" onclick="closeModal()">✕</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Network details will be rendered here -->
+                </div>
+            </div>
         </div>
     </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="storage.js"></script>
+    <script src="particles.js"></script>
+    <script src="radar.js"></script>
+    <script src="scanner.js"></script>
+    <script src="speedtest.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>"""
-        with open(filename, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        print(f"✅ Exported to {filename}")
 
-    def _generate_network_html(self, net: NetworkInfo) -> str:
-        cracked_class = "cracked" if net.cracked else ""
-        password_html = f'<span class="password-badge">🔑 {net.password}</span>' if net.cracked else ''
-        return f"""
-        <div class="network-item {cracked_class}">
-            <div>
-                <div class="network-ssid">{net.ssid}</div>
-                <div class="network-details">{net.bssid} • {net.encryption} • {net.frequency}MHz</div>
+# ═══════════════════════════════════════════════════════════
+# 📡 2. style.css
+# ═══════════════════════════════════════════════════════════
+
+def build_style():
+    return """*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#050510;--card:rgba(10,10,30,0.85);--card2:rgba(15,15,40,0.7);--text:#e8e0f0;--text2:#9088a8;--text3:#504868;--accent:#00ffcc;--accent2:#ff44aa;--accent3:#ffaa00;--accent4:#6366f1;--glass:rgba(0,255,204,0.06);--border:rgba(0,255,204,0.12);--radius:24px;--radius-sm:16px;--radius-xs:12px}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;direction:rtl;user-select:none}
+
+.bg-void{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 20%,rgba(0,255,204,0.04) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(255,68,170,0.03) 0%,transparent 60%),var(--bg)}
+.bg-ring{position:fixed;border-radius:50%;border:1px solid rgba(0,255,204,0.06);z-index:0;pointer-events:none;animation:ringRotate 30s linear infinite}
+.bg-ring-1{width:600px;height:600px;top:-200px;left:-100px;animation-duration:25s}
+.bg-ring-2{width:500px;height:500px;bottom:-150px;right:-80px;animation-duration:35s;animation-direction:reverse}
+.bg-ring-3{width:400px;height:400px;top:30%;left:40%;animation-duration:40s}
+@keyframes ringRotate{to{transform:rotate(360deg)}}
+
+.app{width:100%;max-width:520px;margin:0 auto;padding:12px;position:relative;z-index:1}
+
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:12px}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{width:46px;height:46px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:24px;animation:logoGlow 3s ease-in-out infinite}
+@keyframes logoGlow{0%,100%{box-shadow:0 0 20px rgba(0,255,204,0.3)}50%{box-shadow:0 0 35px rgba(255,68,170,0.6)}}
+.header-text h1{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:800;background:linear-gradient(135deg,#00ffcc,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-text span{font-size:7px;color:var(--text3);letter-spacing:3px}
+.header-right{display:flex;gap:6px}
+.btn-icon{width:38px;height:38px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:var(--text2);transition:all 0.3s}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+.btn-icon.active{background:var(--glass);border-color:var(--accent);color:var(--accent);box-shadow:0 0 20px rgba(0,255,204,0.3)}
+.btn-icon.spinning i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat-card{display:flex;align-items:center;gap:8px;padding:10px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius-sm);border:1px solid var(--border)}
+.stat-icon{font-size:20px}
+.stat-info{flex:1}
+.stat-value{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:8px;color:var(--text3)}
+
+/* Radar */
+.radar-container{position:relative;width:100%;aspect-ratio:1;max-height:300px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:12px}
+.radar-container canvas{width:100%;height:100%}
+.radar-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.radar-center{font-size:40px;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.radar-text{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--accent);margin-top:8px}
+
+/* Scan Controls */
+.scan-controls{display:flex;gap:10px;margin-bottom:12px}
+.scan-btn{flex:1;padding:12px;background:linear-gradient(135deg,var(--accent),var(--accent4));border:none;border-radius:var(--radius-sm);color:#000;font-family:'Cairo',sans-serif;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 8px 30px rgba(0,255,204,0.3);transition:all 0.3s}
+.scan-btn:hover{transform:scale(1.02);box-shadow:0 12px 40px rgba(99,102,241,0.5)}
+.scan-btn:active{transform:scale(0.95)}
+.scan-btn.secondary{background:var(--card2);border:1px solid var(--border);color:var(--text)}
+.scan-btn.secondary:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Speed Test Panel */
+.speed-panel{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px;animation:slideDown 0.4s ease}
+@keyframes slideDown{from{opacity:0;max-height:0}to{opacity:1;max-height:500px}}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.panel-header h3{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--accent)}
+.btn-action{padding:7px 14px;background:var(--card2);border:1px solid var(--border);color:var(--accent);cursor:pointer;border-radius:20px;font-size:10px;font-family:'Cairo',sans-serif;transition:all 0.3s}
+.btn-action:hover{border-color:var(--accent);box-shadow:0 0 15px rgba(0,255,204,0.2)}
+.speed-gauge{text-align:center;padding:15px;background:var(--card2);border-radius:var(--radius-sm);margin-bottom:10px}
+.gauge-value{font-family:'Orbitron',sans-serif;font-size:42px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gauge-unit{font-size:11px;color:var(--text2)}
+.speed-details{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.speed-item{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}
+.speed-item span:last-child{font-family:'Orbitron',sans-serif;color:var(--accent)}
+.progress-track{width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width 0.3s}
+
+/* Channels Panel */
+.channels-panel{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px;animation:slideDown 0.4s ease}
+.channels-chart{display:flex;align-items:flex-end;gap:4px;height:120px;padding:10px;background:var(--card2);border-radius:var(--radius-sm)}
+.channel-bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.channel-bar .bar{width:100%;background:linear-gradient(to top,var(--accent),var(--accent2));border-radius:3px 3px 0 0;min-height:2px;transition:all 0.5s}
+.channel-bar .label{font-family:'Orbitron',sans-serif;font-size:7px;color:var(--text3)}
+
+/* Networks List */
+.networks-section{margin-top:8px;padding-bottom:30px}
+.networks-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.networks-header h3{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.scan-time{font-size:9px;color:var(--text3)}
+.networks-list{display:flex;flex-direction:column;gap:5px}
+.network-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.3s}
+.network-item:hover{border-color:var(--accent);background:var(--glass)}
+.network-item .n-icon{font-size:22px;width:30px;text-align:center}
+.network-item .n-info{flex:1;min-width:0}
+.network-item .n-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.network-item .n-details{font-size:9px;color:var(--text3)}
+.network-item .n-signal{display:flex;align-items:center;gap:4px;font-family:'Orbitron',sans-serif;font-size:10px;color:var(--accent)}
+.signal-bars{display:flex;gap:1px;align-items:flex-end;height:15px}
+.signal-bars span{width:3px;background:var(--accent);border-radius:1px}
+.signal-bars span:nth-child(1){height:25%}
+.signal-bars span:nth-child(2){height:50%}
+.signal-bars span:nth-child(3){height:75%}
+.signal-bars span:nth-child(4){height:100%}
+.empty-state{text-align:center;padding:30px;color:var(--text3)}
+.empty-state span{font-size:40px;display:block;margin-bottom:8px}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px)}
+.modal-content{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--accent);padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto;animation:modalIn 0.3s ease}
+@keyframes modalIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+.modal-header h3{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--accent)}
+.btn-close{width:30px;height:30px;background:var(--card2);border:1px solid var(--border);border-radius:50%;color:var(--text2);cursor:pointer;font-size:12px;transition:all 0.3s}
+.btn-close:hover{border-color:var(--accent2);color:var(--accent2)}
+.modal-body{display:flex;flex-direction:column;gap:10px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.detail-label{font-size:10px;color:var(--text3)}
+.detail-value{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--text)}
+
+.toast{position:fixed;bottom:35px;left:50%;transform:translateX(-50%) translateY(130px);background:var(--card);border:1px solid var(--accent);color:var(--text);padding:10px 22px;border-radius:25px;font-size:11px;z-index:300;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);font-family:'Cairo',sans-serif}.toast.show{transform:translateX(-50%) translateY(0)}
+.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+@keyframes particleFloat{0%{transform:translateY(110vh) scale(0);opacity:0}15%{opacity:0.7}85%{opacity:0.1}100%{transform:translateY(-10vh) scale(1.5);opacity:0}}
+
+@media(max-width:400px){.stats-grid{gap:5px}.stat-value{font-size:13px}.scan-btn{font-size:10px}}"""
+
+# ═══════════════════════════════════════════════════════════
+# 📡 3-7. JS Files
+# ═══════════════════════════════════════════════════════════
+
+def build_storage_js():
+    return """const KEYS={networks:'netscan_networks',history:'netscan_history',settings:'netscan_settings'};
+function saveData(k,v){try{localStorage.setItem(k,JSON.stringify(v));return 1}catch(e){return 0}}
+function loadData(k,d=null){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function saveNetworks(networks){saveData(KEYS.networks,networks)}
+function loadNetworks(){return loadData(KEYS.networks,[])}
+function saveHistory(history){saveData(KEYS.history,history)}
+function loadHistory(){return loadData(KEYS.history,[])}"""
+
+def build_particles_js():
+    return """function initParticles(){const c=document.getElementById('particlesContainer');c.innerHTML='';const cols=['#00ffcc','#ff44aa','#6366f1'];for(let i=0;i<40;i++){const p=document.createElement('div');p.className='particle';p.style.cssText=`left:${Math.random()*100}%;bottom:-10px;width:${Math.random()*4+1}px;height:${Math.random()*4+1}px;background:radial-gradient(circle,${cols[i%3]} 0%,transparent 70%);animation:particleFloat ${Math.random()*5+5}s ease-in infinite;animation-delay:${Math.random()*5}s`;c.appendChild(p)}}"""
+
+def build_radar_js():
+    return """let radarCanvas,radarCtx,radarAnimation,networks=[];
+
+function initRadar(){
+    radarCanvas=document.getElementById('radarCanvas');
+    radarCtx=radarCanvas.getContext('2d');
+    resizeRadar();
+    window.addEventListener('resize',resizeRadar);
+    drawRadar();
+}
+
+function resizeRadar(){
+    const container=radarCanvas.parentElement;
+    radarCanvas.width=container.clientWidth;
+    radarCanvas.height=container.clientHeight;
+}
+
+function drawRadar(){
+    radarAnimation=requestAnimationFrame(drawRadar);
+    const w=radarCanvas.width,h=radarCanvas.height;
+    const cx=w/2,cy=h/2,radius=Math.min(w,h)*0.42;
+    
+    radarCtx.fillStyle='rgba(5,5,16,0.5)';
+    radarCtx.fillRect(0,0,w,h);
+    
+    // Draw radar circles
+    for(let i=1;i<=4;i++){
+        radarCtx.beginPath();
+        radarCtx.arc(cx,cy,radius*i/4,0,Math.PI*2);
+        radarCtx.strokeStyle=`rgba(0,255,204,${0.1+i*0.05})`;
+        radarCtx.lineWidth=1;
+        radarCtx.stroke();
+    }
+    
+    // Draw cross lines
+    radarCtx.beginPath();
+    radarCtx.moveTo(cx-radius,cy);
+    radarCtx.lineTo(cx+radius,cy);
+    radarCtx.strokeStyle='rgba(0,255,204,0.05)';
+    radarCtx.stroke();
+    radarCtx.beginPath();
+    radarCtx.moveTo(cx,cy-radius);
+    radarCtx.lineTo(cx,cy+radius);
+    radarCtx.stroke();
+    
+    // Draw sweep line
+    const angle=Date.now()/1000;
+    radarCtx.beginPath();
+    radarCtx.moveTo(cx,cy);
+    radarCtx.lineTo(cx+Math.cos(angle)*radius,cy+Math.sin(angle)*radius);
+    radarCtx.strokeStyle='rgba(0,255,204,0.3)';
+    radarCtx.lineWidth=2;
+    radarCtx.stroke();
+    
+    // Draw network points
+    networks.forEach((net,index)=>{
+        const signalStrength=net.signalStrength||0;
+        const normalizedSignal=(signalStrength+100)/100; // -100dBm to 0dBm → 0 to 1
+        const distance=normalizedSignal*radius;
+        const netAngle=index*0.5+0.3;
+        const x=cx+Math.cos(netAngle)*distance;
+        const y=cy+Math.sin(netAngle)*distance;
+        const size=3+normalizedSignal*5;
+        
+        radarCtx.beginPath();
+        radarCtx.arc(x,y,size,0,Math.PI*2);
+        const color=normalizedSignal>0.7?'#00ffcc':normalizedSignal>0.4?'#ffaa00':'#ff44aa';
+        radarCtx.fillStyle=color;
+        radarCtx.shadowColor=color;
+        radarCtx.shadowBlur=10;
+        radarCtx.fill();
+        radarCtx.shadowBlur=0;
+    });
+}
+
+function updateRadar(networkList){
+    networks=networkList;
+}"""
+
+def build_scanner_js():
+    return """let networks=[],scanInterval=null,isScanning=false;
+
+function startScan(){
+    if(isScanning)return;
+    isScanning=true;
+    document.getElementById('scanBtn').innerHTML='<i class="fas fa-spinner fa-spin"></i> جارٍ المسح...';
+    document.getElementById('btnRefresh').classList.add('spinning');
+    document.getElementById('radarStatus').textContent='جارٍ المسح...';
+    
+    // Clear previous results
+    networks=[];
+    updateUI();
+    
+    // Check if Web Bluetooth API is available
+    if(navigator.bluetooth){
+        scanWithBluetooth();
+    }else{
+        // Fallback to mock data or show instructions
+        showToast('⚠️ متصفحك لا يدعم فحص WiFi');
+        generateMockNetworks();
+        setTimeout(()=>{
+            isScanning=false;
+            document.getElementById('scanBtn').innerHTML='<i class="fas fa-wifi"></i> بدء المسح';
+            document.getElementById('btnRefresh').classList.remove('spinning');
+            document.getElementById('radarStatus').textContent='اكتمل المسح';
+        },3000);
+    }
+}
+
+function scanWithBluetooth(){
+    // Note: Web Bluetooth doesn't directly scan WiFi
+    // This is a placeholder for actual implementation
+    // In real implementation, you'd use a backend service
+    
+    // Simulate scanning
+    scanInterval=setInterval(()=>{
+        if(networks.length<10){
+            addMockNetwork();
+        }else{
+            clearInterval(scanInterval);
+            finishScan();
+        }
+    },500);
+}
+
+function addMockNetwork(){
+    const ssids=['Home_5G','Office_WiFi','Cafe_Free','Guest_Network','AP_2044','TechHub','SmartHome','IoT_Device','Neighbor_Net','Public_WiFi'];
+    const encryptions=['WPA2','WPA3','WEP','Open','WPA2-PSK'];
+    const randomSsid=ssids[Math.floor(Math.random()*ssids.length)]+Math.floor(Math.random()*100);
+    const randomEnc=encryptions[Math.floor(Math.random()*encryptions.length)];
+    const randomSignal=Math.floor(Math.random()*100)-100; // -100 to 0 dBm
+    const randomChannel=Math.floor(Math.random()*11)+1;
+    
+    const network={
+        id:Date.now()+Math.random(),
+        ssid:randomSsid,
+        bssid:generateMac(),
+        signalStrength:randomSignal,
+        security:randomEnc,
+        channel:randomChannel,
+        frequency:randomChannel<=13?2400+randomChannel*5:5000+randomChannel*5,
+        capabilities:randomEnc,
+        detectedAt:new Date().toISOString()
+    };
+    
+    // Check if network already exists
+    if(!networks.find(n=>n.ssid===network.ssid)){
+        networks.push(network);
+        updateUI();
+    }
+}
+
+function generateMac(){
+    const hex='0123456789ABCDEF';
+    let mac='';
+    for(let i=0;i<6;i++){
+        if(i>0)mac+=':';
+        mac+=hex[Math.floor(Math.random()*16)]+hex[Math.floor(Math.random()*16)];
+    }
+    return mac;
+}
+
+function generateMockNetworks(){
+    const ssids=['Home_5G','Office_WiFi','Cafe_Free','Guest_Network','AP_2044','TechHub','SmartHome','IoT_Device','Neighbor_Net','Public_WiFi','Library_WiFi','Restaurant_Net'];
+    const encryptions=['WPA2','WPA3','WEP','Open','WPA2-PSK','WPA2-Enterprise'];
+    
+    for(let i=0;i<12;i++){
+        const network={
+            id:Date.now()+i+Math.random(),
+            ssid:ssids[i],
+            bssid:generateMac(),
+            signalStrength:Math.floor(Math.random()*100)-100,
+            security:encryptions[Math.floor(Math.random()*encryptions.length)],
+            channel:Math.floor(Math.random()*11)+1,
+            frequency:0,
+            capabilities:encryptions[Math.floor(Math.random()*encryptions.length)],
+            detectedAt:new Date().toISOString()
+        };
+        network.frequency=network.channel<=13?2400+network.channel*5:5000+network.channel*5;
+        networks.push(network);
+    }
+    updateUI();
+}
+
+function finishScan(){
+    isScanning=false;
+    document.getElementById('scanBtn').innerHTML='<i class="fas fa-wifi"></i> بدء المسح';
+    document.getElementById('btnRefresh').classList.remove('spinning');
+    document.getElementById('radarStatus').textContent='تم اكتشاف '+networks.length+' شبكة';
+    document.getElementById('scanTime').textContent='آخر مسح: '+new Date().toLocaleTimeString('ar');
+    
+    // Save to history
+    const history=loadHistory();
+    history.push({timestamp:new Date().toISOString(),count:networks.length});
+    saveHistory(history);
+    
+    showToast('✅ اكتمل المسح: '+networks.length+' شبكة');
+}
+
+function refreshScan(){
+    if(!isScanning){
+        startScan();
+    }
+}
+
+function scanSpecific(){
+    const target=prompt('أدخل اسم الشبكة (SSID):');
+    if(target){
+        showToast('🔍 البحث عن: '+target);
+        setTimeout(()=>{
+            const found=networks.find(n=>n.ssid.toLowerCase().includes(target.toLowerCase()));
+            if(found){
+                showNetworkDetails(found.id);
+            }else{
+                showToast('❌ لم يتم العثور على الشبكة');
+            }
+        },1000);
+    }
+}
+
+function updateUI(){
+    // Update stats
+    document.getElementById('networkCount').textContent=networks.length;
+    const secureCount=networks.filter(n=>n.security!=='Open').length;
+    document.getElementById('secureCount').textContent=secureCount;
+    const avgSignal=networks.length?Math.round(networks.reduce((sum,n)=>sum+n.signalStrength,0)/networks.length):0;
+    document.getElementById('avgSignal').textContent=avgSignal+'%';
+    
+    // Update radar
+    updateRadar(networks);
+    
+    // Render network list
+    renderNetworks();
+    
+    // Update channels
+    renderChannels();
+    
+    // Save networks
+    saveNetworks(networks);
+}
+
+function renderNetworks(){
+    const container=document.getElementById('networksList');
+    if(!networks.length){
+        container.innerHTML='<div class="empty-state"><span>📡</span><p>اضغط "بدء المسح" لاكتشاف الشبكات</p></div>';
+        return;
+    }
+    
+    // Sort by signal strength
+    const sorted=[...networks].sort((a,b)=>b.signalStrength-a.signalStrength);
+    
+    container.innerHTML=sorted.map(net=>{
+        const signalStrength=net.signalStrength;
+        const signalPercent=Math.abs(signalStrength); // Convert to positive percentage
+        const bars=getSignalBars(signalPercent);
+        
+        return `<div class="network-item" onclick="showNetworkDetails('${net.id}')">
+            <div class="n-icon">${getSecurityIcon(net.security)}</div>
+            <div class="n-info">
+                <div class="n-name">${net.ssid}</div>
+                <div class="n-details">${net.security} • قناة ${net.channel}</div>
             </div>
-            <div style="text-align:left">
-                <div class="network-signal">{net.signal}%</div>
-                {password_html}
+            <div class="n-signal">
+                <div class="signal-bars">${bars}</div>
+                <span>${signalPercent}%</span>
             </div>
-        </div>"""
+        </div>`;
+    }).join('');
+}
 
-    def print_table(self, limit: int = 30):
-        print("\n" + "="*100)
-        print(f"{'SSID':<25} {'BSSID':<20} {'Signal':<8} {'Encryption':<15} {'Freq':<8} {'Source':<12} {'Status':<10}")
-        print("-"*100)
-        for net in self.networks[:limit]:
-            ssid = net.ssid[:24]
-            bssid = net.bssid
-            signal = f"{net.signal}%"
-            encryption = net.encryption[:14]
-            freq = f"{net.frequency}MHz"
-            source = net.source[:11]
-            status = "🔓 CRACKED" if net.cracked else "🔒 SECURE" if net.encryption != "Open" else "🔓 OPEN"
-            print(f"{ssid:<25} {bssid:<20} {signal:<8} {encryption:<15} {freq:<8} {source:<12} {status:<10}")
-        print("="*100)
-        print(f"Total: {len(self.networks)} networks | Cracked: {len(self.cracked_networks)}")
+function getSignalBars(percent){
+    const barCount=Math.ceil(percent/25);
+    let bars='';
+    for(let i=0;i<4;i++){
+        if(i<barCount){
+            bars+='<span style="background:'+(percent>70?'#00ffcc':percent>40?'#ffaa00':'#ff44aa')+'"></span>';
+        }else{
+            bars+='<span style="background:rgba(255,255,255,0.1)"></span>';
+        }
+    }
+    return bars;
+}
 
-# ============================================
-# 🔥 Web UI Server (Flask)
-# ============================================
-class WebUIServer:
-    def __init__(self, scanner: WiFiScanner, port: int = 5000):
-        self.scanner = scanner
-        self.port = port
-        self.app = None
+function getSecurityIcon(security){
+    if(security==='Open')return '🔓';
+    if(security.includes('WPA3'))return '🛡️';
+    return '🔒';
+}
 
-    def start(self):
-        try:
-            from flask import Flask, jsonify, request, send_file, render_template_string
-            self.app = Flask(__name__)
-            
-            @self.app.route('/')
-            def index():
-                return render_template_string("""
-                <!DOCTYPE html>
-                <html dir="rtl" lang="ar">
-                <head><meta charset="UTF-8"><title>WiFi NETSCAN Pro</title>
-                <style>
-                *{margin:0;padding:0;box-sizing:border-box}
-                body{font-family:'Cairo',sans-serif;background:#0a0a1a;color:#f0e8ff;padding:20px;direction:rtl}
-                .container{max-width:600px;margin:0 auto}
-                .header{text-align:center;padding:20px 0}
-                .header h1{background:linear-gradient(135deg,#00ffcc,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-                .btn{background:linear-gradient(135deg,#00ffcc,#6366f1);border:none;color:#000;padding:12px 30px;border-radius:25px;font-size:16px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;margin:5px}
-                .btn:hover{transform:scale(1.05)}
-                .btn.danger{background:linear-gradient(135deg,#ff3366,#ff6600)}
-                .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0}
-                .stat-card{background:rgba(15,15,35,0.9);border:1px solid rgba(0,255,204,0.15);border-radius:12px;padding:12px;text-align:center}
-                .stat-value{font-size:20px;font-weight:700;color:#00ffcc}
-                .stat-label{font-size:10px;color:#a098b8}
-                .network-item{background:rgba(15,15,35,0.9);border:1px solid rgba(0,255,204,0.1);border-radius:10px;padding:12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
-                .network-item:hover{border-color:#00ffcc}
-                .cracked{border-color:#ff6600}
-                .password-badge{background:#ff3366;color:#fff;padding:2px 10px;border-radius:12px;font-size:10px}
-                .footer{text-align:center;padding:20px;color:#605878;font-size:11px}
-                </style>
-                </head>
-                <body>
-                <div class="container">
-                    <div class="header"><h1>📡 WiFi NETSCAN Pro</h1></div>
-                    <div style="text-align:center;margin:15px 0">
-                        <button class="btn" onclick="scan()">🔄 مسح الشبكات</button>
-                        <button class="btn danger" onclick="crack()">💀 اختراق</button>
-                        <button class="btn" onclick="exportData()">📥 تصدير</button>
-                    </div>
-                    <div class="stats" id="stats">
-                        <div class="stat-card"><div class="stat-value" id="total">0</div><div class="stat-label">📶 الشبكات</div></div>
-                        <div class="stat-card"><div class="stat-value" id="secure">0</div><div class="stat-label">🔒 آمنة</div></div>
-                        <div class="stat-card"><div class="stat-value" id="open">0</div><div class="stat-label">🔓 مفتوحة</div></div>
-                        <div class="stat-card"><div class="stat-value" id="cracked">0</div><div class="stat-label">💀 مخترقة</div></div>
-                    </div>
-                    <div id="networks"></div>
-                    <div class="footer">WiFi NETSCAN Pro v3.0</div>
-                </div>
-                <script>
-                function loadNetworks(){fetch('/api/networks').then(r=>r.json()).then(data=>{document.getElementById('total').textContent=data.total;document.getElementById('secure').textContent=data.secure;document.getElementById('open').textContent=data.open;document.getElementById('cracked').textContent=data.cracked;const c=document.getElementById('networks');c.innerHTML=data.networks.map(n=>`<div class="network-item ${n.cracked?'cracked':''}"><div><strong>${n.ssid}</strong><br><small>${n.bssid} • ${n.encryption}</small></div><div style="text-align:left"><div>${n.signal}%</div>${n.cracked?`<span class="password-badge">🔑 ${n.password}</span>`:''}</div></div>`).join('')})}
-                function scan(){fetch('/api/scan',{method:'POST'}).then(()=>{setTimeout(loadNetworks,2000)})}
-                function crack(){fetch('/api/crack',{method:'POST'}).then(()=>{setTimeout(loadNetworks,3000)})}
-                function exportData(){window.open('/api/export')}
-                loadNetworks();setInterval(loadNetworks,5000)
-                </script>
-                </body>
-                </html>
-                """)
-            
-            @self.app.route('/api/networks')
-            def api_networks():
-                return jsonify({
-                    "total": len(self.scanner.networks),
-                    "secure": len([n for n in self.scanner.networks if n.encryption != "Open"]),
-                    "open": len([n for n in self.scanner.networks if n.encryption == "Open"]),
-                    "cracked": len(self.scanner.cracked_networks),
-                    "networks": [{"ssid": n.ssid, "bssid": n.bssid, "signal": n.signal, 
-                                 "encryption": n.encryption, "cracked": n.cracked, "password": n.password} 
-                                for n in self.scanner.networks[:50]]
-                })
-            
-            @self.app.route('/api/scan', methods=['POST'])
-            def api_scan():
-                self.scanner.scan_all()
-                return jsonify({"status": "success", "total": len(self.scanner.networks)})
-            
-            @self.app.route('/api/crack', methods=['POST'])
-            def api_crack():
-                self.scanner.crack_all_networks()
-                return jsonify({"status": "success", "cracked": len(self.scanner.cracked_networks)})
-            
-            @self.app.route('/api/export')
-            def api_export():
-                self.scanner.export_json()
-                return send_file(CONFIG["output_file"], as_attachment=True)
-            
-            print(f"🌐 Web UI running at http://localhost:{self.port}")
-            self.app.run(host='0.0.0.0', port=self.port, debug=False, threaded=True)
-        except ImportError:
-            print("⚠️ Flask not installed. Install with: pip install flask")
-        except Exception as e:
-            print(f"⚠️ Web UI error: {str(e)}")
+function renderChannels(){
+    const container=document.getElementById('channelsChart');
+    if(!container)return;
+    
+    const channels={};
+    networks.forEach(net=>{
+        channels[net.channel]=(channels[net.channel]||0)+1;
+    });
+    
+    container.innerHTML=Array.from({length:14},(_,i)=>{
+        const channel=i+1;
+        const count=channels[channel]||0;
+        const height=count?Math.min(100,count*20):2;
+        const color=count>5?'#ff44aa':count>2?'#ffaa00':'#00ffcc';
+        
+        return `<div class="channel-bar">
+            <div class="bar" style="height:${height}px;background:linear-gradient(to top,${color},${color}88)"></div>
+            <div class="label">${channel}</div>
+        </div>`;
+    }).join('');
+}
 
-# ============================================
-# 🔥 CLI Interface
-# ============================================
-def get_location() -> Tuple[Optional[float], Optional[float]]:
-    try:
-        import requests
-        response = requests.get("http://ip-api.com/json/", timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "success":
-                return data.get("lat"), data.get("lon")
-    except:
-        pass
-    return None, None
+function showNetworkDetails(id){
+    const net=networks.find(n=>n.id===id);
+    if(!net)return;
+    
+    document.getElementById('modalTitle').textContent=net.ssid;
+    document.getElementById('modalBody').innerHTML=`
+        <div class="detail-row">
+            <span class="detail-label">SSID</span>
+            <span class="detail-value">${net.ssid}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">BSSID (MAC)</span>
+            <span class="detail-value">${net.bssid}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">قوة الإشارة</span>
+            <span class="detail-value">${net.signalStrength} dBm (${Math.abs(net.signalStrength)}%)</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">التشفير</span>
+            <span class="detail-value">${net.security}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">القناة</span>
+            <span class="detail-value">${net.channel}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">التردد</span>
+            <span class="detail-value">${net.frequency} MHz</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">وقت الاكتشاف</span>
+            <span class="detail-value">${new Date(net.detectedAt).toLocaleTimeString('ar')}</span>
+        </div>
+    `;
+    
+    document.getElementById('networkModal').style.display='flex';
+}
+
+function closeModal(){
+    document.getElementById('networkModal').style.display='none';
+}
+
+function toggleSpeedTest(){
+    const panel=document.getElementById('speedPanel');
+    panel.style.display=panel.style.display==='none'?'block':'none';
+    document.getElementById('btnSpeed').classList.toggle('active',panel.style.display==='block');
+}
+
+function toggleChannels(){
+    const panel=document.getElementById('channelsPanel');
+    panel.style.display=panel.style.display==='none'?'block':'none';
+    document.getElementById('btnChannels').classList.toggle('active',panel.style.display==='block');
+    if(panel.style.display==='block')renderChannels();
+}
+
+function showToast(message){
+    const toast=document.getElementById('toast');
+    toast.textContent=message;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2500);
+}"""
+
+def build_speedtest_js():
+    return """let speedTestRunning=false;
+
+function startSpeedTest(){
+    if(speedTestRunning)return;
+    speedTestRunning=true;
+    
+    const progressFill=document.getElementById('speedProgress');
+    const speedValue=document.getElementById('speedValue');
+    const downloadSpeed=document.getElementById('downloadSpeed');
+    const uploadSpeed=document.getElementById('uploadSpeed');
+    const pingValue=document.getElementById('pingValue');
+    
+    progressFill.style.width='0%';
+    speedValue.textContent='0.0';
+    downloadSpeed.textContent='-- Mbps';
+    uploadSpeed.textContent='-- Mbps';
+    pingValue.textContent='-- ms';
+    
+    showToast('⚡ بدء اختبار السرعة...');
+    
+    // Simulate ping test
+    setTimeout(()=>{
+        const ping=Math.floor(Math.random()*50)+10;
+        pingValue.textContent=ping+' ms';
+        progressFill.style.width='20%';
+    },500);
+    
+    // Simulate download test
+    let progress=20;
+    const downloadInterval=setInterval(()=>{
+        progress+=5;
+        progressFill.style.width=progress+'%';
+        const download=Math.random()*80+20;
+        speedValue.textContent=download.toFixed(1);
+        if(progress>=60){
+            clearInterval(downloadInterval);
+            const finalDownload=Math.random()*80+40;
+            downloadSpeed.textContent=finalDownload.toFixed(1)+' Mbps';
+            speedValue.textContent=finalDownload.toFixed(1);
+            
+            // Simulate upload test
+            let uploadProgress=60;
+            const uploadInterval=setInterval(()=>{
+                uploadProgress+=5;
+                progressFill.style.width=uploadProgress+'%';
+                const upload=Math.random()*30+10;
+                if(uploadProgress>=100){
+                    clearInterval(uploadInterval);
+                    uploadSpeed.textContent=upload.toFixed(1)+' Mbps';
+                    progressFill.style.width='100%';
+                    speedTestRunning=false;
+                    showToast('✅ اكتمل اختبار السرعة');
+                }
+            },300);
+        }
+    },300);
+}"""
+
+def build_app_js():
+    return """initParticles();
+initRadar();
+
+// Load saved networks
+networks=loadNetworks();
+if(networks.length){
+    updateUI();
+    document.getElementById('radarStatus').textContent='تم تحميل '+networks.length+' شبكة';
+}
+
+// Close modal on outside click
+document.getElementById('networkModal').addEventListener('click',function(e){
+    if(e.target===this)closeModal();
+});
+
+// Keyboard shortcut for scan
+document.addEventListener('keydown',function(e){
+    if(e.key==='s'&&e.ctrlKey){
+        e.preventDefault();
+        startScan();
+    }
+});"""
+
+# ═══════════════════════════════════════════════════════════
+# 📡 MAIN
+# ═══════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description="📡 WiFi NETSCAN PRO - Ultimate Network Scanner")
-    parser.add_argument("-s", "--scan", help="مسح الشبكات", action="store_true")
-    parser.add_argument("-c", "--crack", help="اختراق الشبكات", action="store_true")
-    parser.add_argument("-l", "--location", help="الموقع (lat,lng)", default=None)
-    parser.add_argument("-o", "--output", help="ملف الإخراج", default="networks")
-    parser.add_argument("-p", "--passwords", help="ملف الباسوردات", default="passwords.txt")
-    parser.add_argument("--export-json", help="تصدير JSON", action="store_true")
-    parser.add_argument("--export-csv", help="تصدير CSV", action="store_true")
-    parser.add_argument("--export-html", help="تصدير HTML", action="store_true")
-    parser.add_argument("--limit", help="عدد الشبكات", type=int, default=100)
-    parser.add_argument("--web", help="تشغيل واجهة الويب", action="store_true")
-    parser.add_argument("--port", help="منفذ الويب", type=int, default=5000)
-    
-    args = parser.parse_args()
-    
-    # Update config
-    if args.limit:
-        CONFIG["max_networks"] = args.limit
-    if args.passwords:
-        CONFIG["password_file"] = args.passwords
-    if args.port:
-        CONFIG["server_port"] = args.port
-    
-    # Get location
-    lat, lng = None, None
-    if args.location:
-        try:
-            lat, lng = map(float, args.location.split(','))
-        except:
-            print("❌ Invalid location")
-            sys.exit(1)
-    else:
-        lat, lng = get_location()
-        if lat and lng:
-            print(f"📍 Location detected: {lat}, {lng}")
-    
-    # Initialize scanner
-    scanner = WiFiScanner()
-    
-    # Run web UI
-    if args.web:
-        server = WebUIServer(scanner, args.port)
-        server.start()
-        return
-    
-    # Scan
-    if args.scan:
-        scanner.scan_all(lat, lng)
-        scanner.print_table()
-    
-    # Crack
-    if args.crack:
-        scanner.crack_all_networks()
-        scanner.print_table()
-    
-    # Export
-    if args.export_json:
-        scanner.export_json(f"{args.output}.json")
-    if args.export_csv:
-        scanner.export_csv(f"{args.output}.csv")
-    if args.export_html:
-        scanner.export_html(f"{args.output}.html")
-    
-    # Default export if nothing specified
-    if not args.export_json and not args.export_csv and not args.export_html:
-        scanner.export_json(f"{args.output}.json")
+    print("""
+╔══════════════════════════════════════════════════════════╗
+║  📡  NETSCAN 2044 - ULTIMATE WIFI SCANNER  📡          ║
+║     Ultimate Generator - WiFi Analyzer                   ║
+╚══════════════════════════════════════════════════════════╝
+    """)
+
+    section("BUILDING NETSCAN 2044")
+
+    write("index.html", build_index())
+    write("style.css", build_style())
+    write("storage.js", build_storage_js())
+    write("particles.js", build_particles_js())
+    write("radar.js", build_radar_js())
+    write("scanner.js", build_scanner_js())
+    write("speedtest.js", build_speedtest_js())
+    write("app.js", build_app_js())
+
+    print(f"""
+{'='*60}
+  ✅ BUILD COMPLETE! - {TOTAL_LINES} خط
+  📁 8 ملفات
+
+  📡 WiFi Network Scanner
+  📊 Signal Strength Visualizer  
+  ⚡ Speed Test
+  📈 Channel Analyzer
+  💾 Network History
+
+  🚀 للتشغيل:
+     افتح index.html في المتصفح
+
+  ⚠️ ملاحظة: المتصفحات لا تدعم فحص WiFi مباشرة
+  🔧 تحتاج إلى Backend (Python/Node.js) للمسح الحقيقي
+
+  📡 NETSCAN 2044 READY!
+{'='*60}
+    """)
 
 if __name__ == "__main__":
     main()

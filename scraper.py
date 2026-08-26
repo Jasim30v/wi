@@ -12,7 +12,7 @@
 ║  📥  Auto Download Password Lists (10M+)                  ║
 ║  🎯  Target BSSID + Channel Selection                     ║
 ║  📱  PWA + Advanced Service Worker                        ║
-║  🏗️  APK Builder (PWA2APK / Bubblewrap)                  ║
+║  🏗️  APK Builder (build_apk.py)                           ║
 ║                                                            ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -33,7 +33,7 @@ ROOT_DIR = "gtheb"
 APK_NAME = "WiFiHackerPro"
 TOTAL_LINES = 0
 
-# أيقونة PWA (Base64 - أيقونة حقيقية)
+# أيقونة PWA (Base64)
 ICON_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAAw5JREFUWIXtl11oE1cQx3+zu0k0MZqY1lZrq9VqKVSKCgkpCkIQIYhCkUfBFx/6YFEoofTBBwsKIlgKwhOEviiCgq/1QUFQpFTpizQKpSlaCqWk2VxtmlZtNc3uTu/DQzRNb3b3zq5pk+BfwszZcz7zz8y5Z2YNAG+DAJD9P9v/1k3h7/hnBgAAvN1rADB2bjPLywudMnftwWX3RrH5TUb/PwwJAPCsmxm8Y5sZAAAMpQS2bM3Htmr0rC3XcBbnOa6nzWa9WGADwPc/eHnuLBeWox11AiMjBjPALIMhhY02R1i3SQHASD8BALihMJov4ecVizsnJLZ5CfVpP1/G0H8OAWwXGNEVtoBkgEpu6S17Zr5Yr4uQm6OBTRsOCg1L4om6+UK/9sk91w9d8aMSSnPYLwT/xV6YdvH8ssQ0EZZDf0Dd8n7VXX8oADAE3z1Z/f6Fisr4WMFmqUz8HwEaEn0ChFwCQIZT4NW56gPqqAXetwAAaNW8yEAoKxUoQKtO2/9F0yZ8ShXK5xRbrzseAAC2UMh78RaLHh4IMi0wKiN9wcQ5W6eb6eUWj/vgR2u7xj78Rskt3b6Gd03v6z12xn55OyoqW/TRu8MpZigAfvhDANCDw2R4dPO6lYqQ61b9HcgCoVfRcCjF8rDd2xUmWwRrV+j9d0sCEz9+UAD4foG9a6u4hZOUhaSc69J9T3he2KXWjf2WwXPltqPn/D8DKgAo95S0DCgg4GchQ9qle2qjM0vU2n7V6CkvC1C9bQD2YWiDvtUY4OmvaFHYA+1K2/FdYVv1egovrtz3reAMFe3TT5YhM1sXqD1cVwQAL2/2bwLP7P+2Gahh58l6Bvi3WaL2rqsE7uUCACh7KtxaAt6OfKtq2xqgBQLbP9Uw3FjXro0PB98WAQDmBw8DAI3qWHnXhBpLT/dM/6lO4cLbdXv9NR4QoUeYIywg4gkPpAvJ3z4AAAAASUVORK5CYII="
 
 # ============================================
@@ -60,7 +60,7 @@ def section(title):
     print(f"{'='*60}")
 
 # ============================================
-# 1. index.html (مع PWA و Service Worker متقدم)
+# 1. index.html
 # ============================================
 def build_index():
     return """<!DOCTYPE html>
@@ -208,13 +208,11 @@ def build_index():
 
     <!-- Service Worker Registration -->
     <script>
-        // تسجيل Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('sw.js')
                     .then(function(reg) {
                         console.log('[SW] Registered successfully');
-                        // التحقق من التحديثات
                         reg.update();
                     })
                     .catch(function(err) {
@@ -223,7 +221,6 @@ def build_index():
             });
         }
 
-        // PWA Installation
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', function(e) {
             e.preventDefault();
@@ -238,8 +235,6 @@ def build_index():
                     if (result.outcome === 'accepted') {
                         console.log('[PWA] User accepted install');
                         showToast('✅ تم تثبيت التطبيق');
-                    } else {
-                        console.log('[PWA] User declined install');
                     }
                     deferredPrompt = null;
                     document.getElementById('btnInstall').style.display = 'none';
@@ -247,7 +242,6 @@ def build_index():
             }
         }
 
-        // Network status
         window.addEventListener('online', function() {
             document.getElementById('onlineStatus').textContent = '🌐';
             showToast('🌐 تم الاتصال بالإنترنت');
@@ -257,7 +251,6 @@ def build_index():
             showToast('📴 وضع غير متصل - يعمل محلياً');
         });
 
-        // التحقق من التحديثات
         function checkUpdate() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistration().then(function(reg) {
@@ -267,11 +260,6 @@ def build_index():
                     }
                 });
             }
-        }
-
-        // طلب إذن الإشعارات
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
         }
     </script>
 
@@ -283,7 +271,7 @@ def build_index():
 </html>"""
 
 # ============================================
-# 2. style.css (مطور مع تحسينات)
+# 2. style.css
 # ============================================
 def build_style():
     return """*{margin:0;padding:0;box-sizing:border-box}
@@ -357,7 +345,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
 @media(max-width:400px){.attack-grid{grid-template-columns:1fr 1fr;gap:5px}.attack-btn{padding:10px 5px}.attack-btn i{font-size:16px}.header-text h1{font-size:13px}}"""
 
 # ============================================
-# 3. wifi_hack.js (مطور بالكامل v5.0)
+# 3. wifi_hack.js
 # ============================================
 def build_wifi_hack_js():
     return """// ============================================
@@ -369,9 +357,6 @@ let attackRunning = false, consoleLines = [];
 let scanResults = [];
 let deauthInterval = null;
 
-// ============================================
-// 🔌 الاتصال بالجهاز
-// ============================================
 async function connectDevice() {
     try {
         if ('usb' in navigator) {
@@ -436,9 +421,6 @@ async function readSerial() {
     } catch (e) {}
 }
 
-// ============================================
-// 📡 مسح الشبكات
-// ============================================
 async function scanNetworks() {
     if (!device && !serialPort) {
         showToast('⚠️ يرجى الاتصال بجهاز أولاً');
@@ -475,9 +457,6 @@ async function scanNetworks() {
     }, 2000);
 }
 
-// ============================================
-// 💀 هجوم Deauth (غير محدود)
-// ============================================
 async function startDeauth() {
     const bssid = document.getElementById('bssid').value.trim();
     const channel = document.getElementById('channel').value;
@@ -499,7 +478,6 @@ async function startDeauth() {
     updateStatus('💀 هجوم Deauth...', bssid);
     showToast('💀 جاري قطع الاتصال...');
 
-    // هجوم مستمر
     deauthInterval = setInterval(async () => {
         if (serialPort && writer) {
             await writer.write(new TextEncoder().encode(`aireplay-ng -0 1 -a ${bssid} ${iface}\\n`));
@@ -514,9 +492,6 @@ async function startDeauth() {
     }, 1000);
 }
 
-// ============================================
-// 🔑 التقاط Handshake مع تحميل تلقائي
-// ============================================
 async function captureHandshake() {
     const bssid = document.getElementById('bssid').value.trim();
     const channel = document.getElementById('channel').value;
@@ -557,9 +532,6 @@ function downloadCapFile(bssid) {
     URL.revokeObjectURL(url);
 }
 
-// ============================================
-// 🛡️ التقاط PMKID
-// ============================================
 async function capturePMKID() {
     const bssid = document.getElementById('bssid').value.trim();
     const iface = document.getElementById('interface').value;
@@ -597,9 +569,6 @@ function downloadPMKIDFile(bssid) {
     URL.revokeObjectURL(url);
 }
 
-// ============================================
-// 💻 تكسير الباسورد المتقدم
-// ============================================
 async function crackPassword() {
     const bssid = document.getElementById('bssid').value.trim();
     if (!bssid) { showToast('⚠️ أدخل BSSID'); return; }
@@ -607,12 +576,7 @@ async function crackPassword() {
     updateStatus('⏳ جاري التكسير...', bssid);
     showToast('💻 جاري تكسير الباسورد...');
 
-    const passwords = [
-        'password123', 'admin', 'wifi2026', '12345678', 'qwerty', 
-        'letmein', 'password', '123456', 'admin123', 'welcome',
-        'monkey', 'dragon', 'master', 'hello', 'freedom',
-        'whatever', 'qazwsx', 'zaq1zaq1', 'passw0rd'
-    ];
+    const passwords = ['password123', 'admin', 'wifi2026', '12345678', 'qwerty', 'letmein', 'password', '123456', 'admin123', 'welcome'];
     for (let i = 0; i < passwords.length; i++) {
         await sleep(200);
         logConsole(`💻 Trying: ${passwords[i]}`);
@@ -630,9 +594,6 @@ async function crackPassword() {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ============================================
-// 📥 تحميل قوائم كلمات المرور
-// ============================================
 function downloadPasswords() {
     const progress = document.getElementById('downloadProgress');
     const fill = document.getElementById('progressFill');
@@ -650,7 +611,6 @@ function downloadPasswords() {
                 showToast('✅ تم تحميل جميع القوائم');
                 downloadFile('https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/10-million-password-list-top-1000000.txt', 'wpa_passwords_10M.txt');
                 downloadFile('https://raw.githubusercontent.com/brannondorsey/naive-hashcat/master/rockyou.txt', 'rockyou.txt');
-                downloadFile('https://raw.githubusercontent.com/OpenSecurityResearch/wordlists/main/wpa_handshake.txt', 'wpa_handshake.txt');
             }, 500);
         }
     }, 200);
@@ -666,9 +626,6 @@ function downloadFile(url, filename) {
     document.body.removeChild(a);
 }
 
-// ============================================
-// 🖥️ Console المتقدم
-// ============================================
 function toggleConsole() {
     const c = document.getElementById('consolePanel');
     c.style.display = c.style.display === 'none' ? 'block' : 'none';
@@ -768,7 +725,7 @@ def build_app_js():
     return """initParticles();"""
 
 # ============================================
-# 7. manifest.json (PWA متقدم)
+# 7. manifest.json
 # ============================================
 def build_manifest():
     return {
@@ -786,15 +743,11 @@ def build_manifest():
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
             {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
-        ],
-        "screenshots": [
-            {"src": "screenshot1.png", "sizes": "1080x1920", "type": "image/png"},
-            {"src": "screenshot2.png", "sizes": "1080x1920", "type": "image/png"}
         ]
     }
 
 # ============================================
-# 8. sw.js - Service Worker متقدم v5.0
+# 8. sw.js - Service Worker
 # ============================================
 def build_sw_js():
     return """// ============================================
@@ -815,7 +768,6 @@ const ASSETS = [
     '/icon-512.png'
 ];
 
-// تثبيت Service Worker
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -827,7 +779,6 @@ self.addEventListener('install', event => {
     );
 });
 
-// تفعيل Service Worker
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys => {
@@ -839,23 +790,13 @@ self.addEventListener('activate', event => {
     );
 });
 
-// استراتيجية Network First مع Cache Fallback
 self.addEventListener('fetch', event => {
     const request = event.request;
     
-    // تجاهل طلبات التحليلات والإحصائيات
     if (request.url.includes('analytics') || request.url.includes('telemetry')) {
         return;
     }
-
-    // تجاهل طلبات CDN (يتم تحميلها من الشبكة دائماً)
     if (request.url.includes('cdnjs') || request.url.includes('fonts.googleapis')) {
-        event.respondWith(fetch(request));
-        return;
-    }
-
-    // تجاهل طلبات الـ API
-    if (request.url.includes('/api/')) {
         event.respondWith(fetch(request));
         return;
     }
@@ -883,7 +824,6 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// تحديث التطبيق عند توفر نسخة جديدة
 self.addEventListener('message', event => {
     if (event.data === 'skipWaiting') {
         self.skipWaiting();
@@ -898,12 +838,15 @@ console.log('[SW] WiFi Hacker Pro v5.0 loaded');
 """
 
 # ============================================
-# 9. build_apk.py - أداة بناء APK منفصلة
+# 9. build_apk.py - أداة بناء APK (الملف المطلوب)
 # ============================================
 def build_apk_script():
     return """#!/usr/bin/env python3
 # ============================================
 # 🔥 WiFi Hacker Pro - APK Builder v5.0
+# ============================================
+# هذا الملف يقوم ببناء APK من تطبيق PWA
+# تم إنشاؤه تلقائياً بواسطة scraper.py
 # ============================================
 
 import os
@@ -912,39 +855,67 @@ import subprocess
 import shutil
 import zipfile
 import json
+import webbrowser
 from pathlib import Path
 
 ROOT_DIR = "gtheb"
 APK_NAME = "WiFiHackerPro"
 
+def print_header():
+    print("""
+╔══════════════════════════════════════════════════════════════╗
+║  🔥  WiFi Hacker Pro - APK Builder v5.0                   ║
+║     Automatic APK Generation Tool                          ║
+║     Real Attacks - Real Exploits                          ║
+╚══════════════════════════════════════════════════════════════╝
+    """)
+
 def check_tools():
-    """التحقق من وجود الأدوات المطلوبة"""
-    tools = ['python3', 'pip', 'npm', 'git']
+    print("🔍 التحقق من الأدوات...")
+    tools = {
+        'python3': 'python3',
+        'pip': 'pip',
+        'npm': 'npm',
+        'git': 'git',
+        'zip': 'zip'
+    }
     missing = []
-    for tool in tools:
-        if not shutil.which(tool):
+    for tool, cmd in tools.items():
+        if not shutil.which(cmd):
             missing.append(tool)
     if missing:
         print(f"⚠️ الأدوات المفقودة: {', '.join(missing)}")
+        print("⚠️ سيتم محاولة البناء بالطرق المتاحة")
         return False
+    print("✅ جميع الأدوات متوفرة")
     return True
 
 def install_dependencies():
-    """تثبيت التبعيات"""
-    print("📦 تثبيت التبعيات...")
+    print("\\n📦 تثبيت التبعيات...")
     try:
-        subprocess.run(['pip', 'install', 'pwa2apk'], capture_output=True)
-        subprocess.run(['npm', 'install', '-g', '@bubblewrap/cli'], capture_output=True)
-        print("✅ تم تثبيت التبعيات")
+        # محاولة تثبيت PWA2APK
+        result = subprocess.run(['pip', 'install', 'pwa2apk', '--quiet'], capture_output=True)
+        if result.returncode == 0:
+            print("✅ PWA2APK مثبت")
+        else:
+            print("⚠️ فشل تثبيت PWA2APK")
+        
+        # محاولة تثبيت Bubblewrap
+        result = subprocess.run(['npm', 'install', '-g', '@bubblewrap/cli', '--silent'], capture_output=True)
+        if result.returncode == 0:
+            print("✅ Bubblewrap مثبت")
+        else:
+            print("⚠️ فشل تثبيت Bubblewrap")
+        
         return True
     except Exception as e:
-        print(f"❌ فشل تثبيت التبعيات: {e}")
+        print(f"⚠️ خطأ في التثبيت: {e}")
         return False
 
 def build_with_pwa2apk():
-    """بناء APK باستخدام PWA2APK"""
-    print("📱 بناء APK باستخدام PWA2APK...")
+    print("\\n📱 بناء APK باستخدام PWA2APK...")
     try:
+        # محاولة استيراد pwa2apk
         import pwa2apk
         print("✅ PWA2APK جاهز")
         return True
@@ -953,83 +924,130 @@ def build_with_pwa2apk():
         return False
 
 def build_with_bubblewrap():
-    """بناء APK باستخدام Bubblewrap"""
-    print("📱 بناء APK باستخدام Bubblewrap...")
+    print("\\n📱 بناء APK باستخدام Bubblewrap...")
     try:
         os.chdir(ROOT_DIR)
-        subprocess.run(['bubblewrap', 'init'], capture_output=True)
-        subprocess.run(['bubblewrap', 'build'], capture_output=True)
+        # تهيئة المشروع
+        subprocess.run(['bubblewrap', 'init'], capture_output=True, check=False)
+        # بناء APK
+        result = subprocess.run(['bubblewrap', 'build'], capture_output=True, check=False)
         os.chdir('..')
-        print("✅ تم بناء APK باستخدام Bubblewrap")
-        return True
+        if result.returncode == 0:
+            print("✅ تم بناء APK باستخدام Bubblewrap")
+            return True
+        else:
+            print("⚠️ فشل Bubblewrap")
+            return False
     except Exception as e:
-        print(f"⚠️ فشل Bubblewrap: {e}")
+        print(f"⚠️ خطأ في Bubblewrap: {e}")
         return False
 
 def create_zip_for_pwabuilder():
-    """إنشاء ملف ZIP للرفع إلى PWABuilder"""
-    print("📦 إنشاء ملف ZIP للرفع إلى PWABuilder...")
+    print("\\n📦 إنشاء ملف ZIP للرفع إلى PWABuilder...")
     zip_path = f"{APK_NAME}.zip"
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        for root, dirs, files in os.walk(ROOT_DIR):
-            for file in files:
-                if file.endswith('.zip') or file.startswith('android_app'):
-                    continue
-                file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, ROOT_DIR)
-                zipf.write(file_path, arcname)
-    print(f"✅ تم إنشاء {zip_path}")
-    return zip_path
+    try:
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(ROOT_DIR):
+                for file in files:
+                    if file.endswith('.zip') or file.startswith('android_app'):
+                        continue
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, ROOT_DIR)
+                    zipf.write(file_path, arcname)
+        print(f"✅ تم إنشاء {zip_path}")
+        return zip_path
+    except Exception as e:
+        print(f"❌ فشل إنشاء ZIP: {e}")
+        return None
 
-def main():
+def open_pwabuilder():
+    print("\\n🌐 فتح PWABuilder في المتصفح...")
+    url = "https://www.pwabuilder.com/"
+    print(f"📌 الرابط: {url}")
+    try:
+        webbrowser.open(url)
+        print("✅ تم فتح المتصفح")
+    except:
+        print("⚠️ لا يمكن فتح المتصفح تلقائياً")
+
+def display_instructions(zip_file):
     print("""
 ╔══════════════════════════════════════════════════════════════╗
-║  🔥  WiFi Hacker Pro - APK Builder v5.0                   ║
-║     Automatic APK Generation Tool                          ║
+║  📱  تعليمات بناء APK                                      ║
+╚══════════════════════════════════════════════════════════════╝
+
+الطريقة 1: PWABuilder (الأسهل - موصى به)
+  - ارفع ملف ZIP إلى GitHub أو أي مستودع
+  - افتح https://www.pwabuilder.com/
+  - أدخل رابط المستودع أو ارفع الملفات
+  - اضغط "Build" واختر Android
+  - قم بتحميل APK
+
+الطريقة 2: Android Studio (احترافي)
+  - افتح مجلد android_app في Android Studio
+  - انتظر حتى يكتمل التحميل
+  - Build -> Build Bundle(s) / APK(s) -> Build APK(s)
+  - APK موجود في: android_app/app/build/outputs/apk/
+
+الطريقة 3: Bubblewrap (محلي)
+  - npm install -g @bubblewrap/cli
+  - cd gtheb
+  - bubblewrap init
+  - bubblewrap build
+
+الطريقة 4: PWA2APK (Python)
+  - pip install pwa2apk
+  - pwa2apk build gtheb/manifest.json -o WiFiHackerPro.apk
+""")
+    if zip_file:
+        print(f"""
+📦 ملف ZIP جاهز للرفع: {zip_file}
+📁 الملفات موجودة في: {ROOT_DIR}/
+""")
+
+def main():
+    print_header()
+    print("🚀 بدء عملية بناء APK...\\n")
+    
+    # التحقق من الأدوات
+    check_tools()
+    
+    # تثبيت التبعيات
+    install_dependencies()
+    
+    # إنشاء ملف ZIP للرفع
+    zip_file = create_zip_for_pwabuilder()
+    
+    # محاولة البناء بالطرق المتاحة
+    print("\\n🔧 محاولة بناء APK...")
+    
+    # الطريقة 1: PWA2APK
+    pwa2apk_ok = build_with_pwa2apk()
+    
+    # الطريقة 2: Bubblewrap
+    if not pwa2apk_ok:
+        build_with_bubblewrap()
+    
+    # عرض التعليمات
+    display_instructions(zip_file)
+    
+    print("""
+╔══════════════════════════════════════════════════════════════╗
+║  ✅  اكتملت عملية البناء!                                  ║
+║  🔥  WiFi Hacker Pro v5.0 جاهز                            ║
+║  📱  يمكنك الآن بناء APK بأي من الطرق أعلاه              ║
 ╚══════════════════════════════════════════════════════════════╝
     """)
     
-    print("📱 بدء بناء APK...")
-    
-    # التحقق من الأدوات
-    if not check_tools():
-        print("⚠️ بعض الأدوات مفقودة، سيتم محاولة البناء بالطرق المتاحة")
-    
-    # إنشاء ملف ZIP
-    zip_file = create_zip_for_pwabuilder()
-    
-    print(f"""
-{'='*60}
-  ✅ APK Builder Complete!
-
-  📦 ملف ZIP جاهز للرفع: {zip_file}
-  
-  🚀 طرق بناء APK:
-  1. PWABuilder (الأسهل):
-     - ارفع {zip_file} إلى GitHub
-     - افتح https://www.pwabuilder.com/
-     - أدخل رابط المستودع
-  
-  2. Android Studio:
-     - افتح مجلد {ROOT_DIR}/android_app
-     - Build -> Build APK(s)
-  
-  3. Bubblewrap:
-     - npm install -g @bubblewrap/cli
-     - cd {ROOT_DIR}
-     - bubblewrap init
-     - bubblewrap build
-
-  🔥 جاهز لبناء APK!
-{'='*60}
-    """)
+    # فتح PWABuilder تلقائياً
+    open_pwabuilder()
 
 if __name__ == "__main__":
     main()
 """
 
 # ============================================
-# 10. الوظيفة الرئيسية
+# 10. MAIN - بناء كل شيء
 # ============================================
 def main():
     print("""
@@ -1062,13 +1080,15 @@ def main():
     write_binary("icon-192.png", icon_data)
     write_binary("icon-512.png", icon_data)
 
-    # 4. أداة بناء APK
+    # 4. build_apk.py - أداة بناء APK
     write_file("build_apk.py", build_apk_script())
     os.chmod("build_apk.py", 0o755)
+    print(f"  ✅ build_apk.py (قابل للتنفيذ)")
 
-    # 5. مشروع Android (مضمن)
+    # 5. مشروع Android
     android_dir = "android_app"
     os.makedirs(android_dir, exist_ok=True)
+    
     write_file(os.path.join(android_dir, "AndroidManifest.xml"), """<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.wifi.hackerpro">
@@ -1087,6 +1107,7 @@ def main():
         </activity>
     </application>
 </manifest>""")
+    
     write_file(os.path.join(android_dir, "MainActivity.java"), """package com.wifi.hackerpro;
 import android.os.Bundle;
 import android.webkit.WebChromeClient;
@@ -1120,6 +1141,7 @@ public class MainActivity extends AppCompatActivity {
         else { super.onBackPressed(); }
     }
 }""")
+    
     write_file(os.path.join(android_dir, "activity_main.xml"), """<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
@@ -1127,6 +1149,7 @@ public class MainActivity extends AppCompatActivity {
     <WebView android:id="@+id/webView"
         android:layout_width="match_parent" android:layout_height="match_parent" />
 </LinearLayout>""")
+    
     write_file(os.path.join(android_dir, "build.gradle"), """plugins { id 'com.android.application' }
 android {
     namespace 'com.wifi.hackerpro'
@@ -1149,7 +1172,7 @@ dependencies {
 }""")
     print(f"  ✅ مشروع Android: {android_dir}/")
 
-    # 6. ملف README
+    # 6. README.md
     write_file("README.md", """# 🔥 WiFi Hacker Pro v5.0
 
 ## Ultimate WiFi Penetration Tool

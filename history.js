@@ -1,0 +1,3 @@
+function toggleHistory(){const p=document.getElementById('historyPanel');p.style.display=p.style.display==='none'?'block':'none';document.getElementById('btnHistory').classList.toggle('active',p.style.display==='block');renderHistory()}
+function renderHistory(){const c=document.getElementById('historyContent');const h=loadHistory();if(!h.length){c.innerHTML='<p class="history-line">📡 لا يوجد سجل بعد</p><p class="history-line">✨ قم بالمسح الأول لعرض السجل</p>';return}c.innerHTML=h.map((entry,i)=>`<p class="history-line ${i===0?'active':''}">🔍 ${new Date(entry.time).toLocaleString('ar')} - تم اكتشاف ${entry.count} شبكة</p>`).join('')}
+function clearHistory(){if(confirm('هل تريد مسح السجل؟')){saveHistory([]);renderHistory();showToast('🗑 تم مسح السجل')}}

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🔥 WiFi Hacker Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-void"></div>
+    <div id="particlesContainer"></div>
+
+    <div class="app">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo">🔥</div>
+                <div class="header-text">
+                    <h1>WiFi Hacker Pro</h1>
+                    <span>✦ Penetration Suite ✦</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="btn-icon" onclick="connectDevice()" id="btnConnect"><i class="fas fa-usb"></i></button>
+                <button class="btn-icon" onclick="toggleConsole()" id="btnConsole"><i class="fas fa-terminal"></i></button>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar" id="statusBar">
+            <span id="statusText">🔴 غير متصل</span>
+            <span id="deviceInfo">لا يوجد جهاز</span>
+        </div>
+
+        <!-- Target Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3>🎯 الهدف</h3>
+                <button class="btn-action" onclick="scanNetworks()"><i class="fas fa-radar"></i> مسح</button>
+            </div>
+            <div class="card-body">
+                <div class="input-group">
+                    <label>BSSID</label>
+                    <input type="text" id="bssid" placeholder="AA:BB:CC:DD:EE:FF" class="input-field">
+                </div>
+                <div class="input-group">
+                    <label>القناة</label>
+                    <input type="number" id="channel" placeholder="6" class="input-field" value="6">
+                </div>
+                <div class="input-group">
+                    <label>الواجهة</label>
+                    <select id="interface" class="input-field">
+                        <option value="wlan0">wlan0</option>
+                        <option value="wlan1">wlan1</option>
+                        <option value="eth0">eth0</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attack Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3>💀 الهجمات</h3>
+            </div>
+            <div class="card-body">
+                <div class="attack-grid">
+                    <button class="attack-btn deauth" onclick="startDeauth()">
+                        <i class="fas fa-broadcast"></i>
+                        <span>Deauth Attack</span>
+                        <small>قطع الاتصال</small>
+                    </button>
+                    <button class="attack-btn handshake" onclick="captureHandshake()">
+                        <i class="fas fa-handshake"></i>
+                        <span>Handshake</span>
+                        <small>التقاط المصافحة</small>
+                    </button>
+                    <button class="attack-btn pmkid" onclick="capturePMKID()">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>PMKID</span>
+                        <small>التقاط PMKID</small>
+                    </button>
+                    <button class="attack-btn crack" onclick="crackPassword()">
+                        <i class="fas fa-unlock"></i>
+                        <span>Crack</span>
+                        <small>تكسير الباسورد</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Download Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3>📥 تحميل قوائم كلمات المرور</h3>
+                <button class="btn-action" onclick="downloadPasswords()"><i class="fas fa-download"></i> تحميل</button>
+            </div>
+            <div class="card-body">
+                <div class="password-list" id="passwordList">
+                    <div class="pwd-item">
+                        <span>🔑 RockYou (14M)</span>
+                        <span class="pwd-size">14.2 MB</span>
+                    </div>
+                    <div class="pwd-item">
+                        <span>🔑 SecLists (10M)</span>
+                        <span class="pwd-size">10.8 MB</span>
+                    </div>
+                    <div class="pwd-item">
+                        <span>🔑 WPA Handshake</span>
+                        <span class="pwd-size">2.3 MB</span>
+                    </div>
+                </div>
+                <div class="download-progress" id="downloadProgress" style="display:none;">
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                    <span id="progressText">جاري التحميل...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Console -->
+        <div class="console" id="consolePanel" style="display:none;">
+            <div class="console-header">
+                <span>🖥️ Terminal</span>
+                <button class="btn-action" onclick="clearConsole()">مسح</button>
+            </div>
+            <div class="console-body" id="consoleBody">
+                <div class="console-line">> WiFi Hacker Pro v3.0</div>
+                <div class="console-line">> جاهز للهجوم...</div>
+            </div>
+            <div class="console-input">
+                <input type="text" id="consoleInput" placeholder="أدخل أمر..." onkeydown="if(event.key==='Enter')execCommand()">
+                <button onclick="execCommand()"><i class="fas fa-arrow-left"></i></button>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script src="storage.js"></script>
+    <script src="particles.js"></script>
+    <script src="wifi_hack.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

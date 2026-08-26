@@ -3,167 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>📡 WiFi Analyzer Pro</title>
+    <title>📡 WiFi Access Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- الخلفية -->
     <div class="bg-void"></div>
     <div class="bg-grid"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
     <div id="particlesContainer"></div>
 
+    <!-- التطبيق -->
     <div class="app">
-        <!-- Header -->
-        <div class="header">
+        <!-- الهيدر -->
+        <div class="header glass-card">
             <div class="header-left">
-                <div class="logo">📡</div>
+                <div class="logo animate-pulse">📡</div>
                 <div class="header-text">
-                    <h1>WiFi Analyzer Pro</h1>
-                    <span>✦ Network Intelligence ✦</span>
+                    <h1>WiFi Access Pro</h1>
+                    <span>✦ Network Manager ✦</span>
                 </div>
             </div>
-            <div class="header-right">
-                <button class="btn-icon" onclick="toggleSpeedTest()" id="btnSpeed"><i class="fas fa-gauge-high"></i></button>
-                <button class="btn-icon" onclick="toggleSecurity()" id="btnSecurity"><i class="fas fa-shield-halved"></i></button>
-                <button class="btn-icon" onclick="refreshNetworks()" id="btnRefresh"><i class="fas fa-rotate"></i></button>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="toggleAutoScan()" id="btnAutoScan" title="مسح تلقائي">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="btn-icon" onclick="refreshNetworks()" id="btnRefresh" title="تحديث">
+                    <i class="fas fa-rotate"></i>
+                </button>
+                <button class="btn-icon" onclick="toggleSettings()" id="btnSettings" title="الإعدادات">
+                    <i class="fas fa-gear"></i>
+                </button>
             </div>
         </div>
 
-        <!-- Network Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#00ffcc"><i class="fas fa-wifi"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value" id="totalNetworks">0</div>
-                    <div class="stat-label">شبكة مكتشفة</div>
+        <!-- حالة الاتصال -->
+        <div class="connection-status glass-card" id="connectionStatus">
+            <div class="status-left">
+                <div class="status-icon" id="statusIcon">
+                    <i class="fas fa-wifi"></i>
+                </div>
+                <div class="status-info">
+                    <div class="status-title" id="statusTitle">جارٍ الفحص...</div>
+                    <div class="status-subtitle" id="statusSubtitle">البحث عن الشبكات المتاحة</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#ff44aa"><i class="fas fa-signal"></i></div>
+            <div class="status-right">
+                <div class="status-badge" id="statusBadge">...</div>
+            </div>
+        </div>
+
+        <!-- الإحصائيات -->
+        <div class="stats-grid">
+            <div class="stat-card glass-card" onclick="scrollToNetworks()">
+                <div class="stat-icon" style="color:#00ffcc">
+                    <i class="fas fa-wifi"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalNetworks">0</div>
+                    <div class="stat-label">شبكة متاحة</div>
+                </div>
+            </div>
+            <div class="stat-card glass-card" onclick="scrollToNetworks()">
+                <div class="stat-icon" style="color:#ff44aa">
+                    <i class="fas fa-signal"></i>
+                </div>
                 <div class="stat-info">
                     <div class="stat-value" id="avgSignal">0%</div>
                     <div class="stat-label">متوسط الإشارة</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#ffaa00"><i class="fas fa-lock"></i></div>
+            <div class="stat-card glass-card" onclick="filterSecure()">
+                <div class="stat-icon" style="color:#00ff88">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
                 <div class="stat-info">
                     <div class="stat-value" id="secureNetworks">0</div>
                     <div class="stat-label">شبكة آمنة</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#6366f1"><i class="fas fa-tower-broadcast"></i></div>
+            <div class="stat-card glass-card" onclick="filterOpen()">
+                <div class="stat-icon" style="color:#ff4444">
+                    <i class="fas fa-unlock"></i>
+                </div>
                 <div class="stat-info">
-                    <div class="stat-value" id="bestChannel">-</div>
-                    <div class="stat-label">أفضل قناة</div>
+                    <div class="stat-value" id="openNetworks">0</div>
+                    <div class="stat-label">شبكة مفتوحة</div>
                 </div>
             </div>
         </div>
 
-        <!-- Signal Visualizer -->
-        <div class="visualizer-section">
-            <div class="viz-header">
-                <h3>📊 تحليل الإشارات</h3>
-                <div class="viz-legend">
-                    <span><i class="fas fa-circle" style="color:#00ffcc;font-size:8px"></i> ممتاز</span>
-                    <span><i class="fas fa-circle" style="color:#ffaa00;font-size:8px"></i> متوسط</span>
-                    <span><i class="fas fa-circle" style="color:#ff4444;font-size:8px"></i> ضعيف</span>
+        <!-- شريط التقدم والفلترة -->
+        <div class="filter-section glass-card">
+            <div class="filter-header">
+                <h3>📶 الشبكات المكتشفة</h3>
+                <div class="filter-actions">
+                    <button class="filter-btn active" onclick="filterNetworks('all', this)">
+                        <i class="fas fa-list"></i> الكل
+                    </button>
+                    <button class="filter-btn" onclick="filterNetworks('secure', this)">
+                        <i class="fas fa-lock"></i> آمنة
+                    </button>
+                    <button class="filter-btn" onclick="filterNetworks('open', this)">
+                        <i class="fas fa-unlock"></i> مفتوحة
+                    </button>
+                    <button class="filter-btn" onclick="filterNetworks('5g', this)">
+                        <i class="fas fa-tower-broadcast"></i> 5GHz
+                    </button>
                 </div>
             </div>
-            <div class="signal-graph" id="signalGraph">
-                <canvas id="signalCanvas"></canvas>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="ابحث عن شبكة..." oninput="searchNetworks(this.value)">
             </div>
         </div>
 
-        <!-- Channel Analysis -->
-        <div class="channel-section">
-            <div class="channel-header">
-                <h3>📡 تحليل القنوات</h3>
-                <span id="channelRecommendation" class="recommendation-badge"></span>
-            </div>
-            <div class="channel-graph" id="channelGraph">
-                <div class="channel-bars" id="channelBars"></div>
+        <!-- قائمة الشبكات -->
+        <div class="networks-list" id="networksList">
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>جارٍ فحص الشبكات...</p>
             </div>
         </div>
 
-        <!-- Speed Test Panel -->
-        <div class="speed-panel" id="speedPanel" style="display:none">
-            <div class="speed-header">
-                <h3>🚀 اختبار السرعة</h3>
-                <button class="btn-action" onclick="startSpeedTest()" id="btnStartTest">
-                    <i class="fas fa-play"></i> بدء الاختبار
+        <!-- لوحة الإعدادات -->
+        <div class="settings-panel glass-card" id="settingsPanel" style="display:none">
+            <div class="settings-header">
+                <h3>⚙️ الإعدادات</h3>
+                <button class="btn-close" onclick="toggleSettings()">
+                    <i class="fas fa-xmark"></i>
                 </button>
             </div>
-            <div class="speed-results">
-                <div class="speed-metric">
-                    <div class="speed-value" id="downloadSpeed">0</div>
-                    <div class="speed-unit">Mbps</div>
-                    <div class="speed-label">⬇️ التحميل</div>
+            <div class="settings-content">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-title">المسح التلقائي</div>
+                        <div class="setting-desc">تحديث الشبكات كل 10 ثوانٍ</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="autoScanToggle" checked onchange="toggleAutoScanSetting()">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div class="speed-metric">
-                    <div class="speed-value" id="uploadSpeed">0</div>
-                    <div class="speed-unit">Mbps</div>
-                    <div class="speed-label">⬆️ الرفع</div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-title">إظهار الشبكات المخفية</div>
+                        <div class="setting-desc">عرض الشبكات بدون اسم</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="showHiddenToggle" onchange="toggleHiddenNetworks()">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div class="speed-metric">
-                    <div class="speed-value" id="pingValue">0</div>
-                    <div class="speed-unit">ms</div>
-                    <div class="speed-label">📡 البينغ</div>
-                </div>
-            </div>
-            <div class="speed-progress">
-                <div class="speed-progress-bar" id="speedProgressBar"></div>
-            </div>
-        </div>
-
-        <!-- Security Panel -->
-        <div class="security-panel" id="securityPanel" style="display:none">
-            <div class="security-header">
-                <h3>🔐 تحليل الأمان</h3>
-                <span id="securityScore" class="security-score"></span>
-            </div>
-            <div class="security-checks" id="securityChecks"></div>
-        </div>
-
-        <!-- Network List -->
-        <div class="networks-section">
-            <div class="networks-header">
-                <h3>📶 الشبكات المكتشفة</h3>
-                <div class="filter-buttons">
-                    <button class="filter-btn active" onclick="filterNetworks('all', this)">الكل</button>
-                    <button class="filter-btn" onclick="filterNetworks('secure', this)">آمنة</button>
-                    <button class="filter-btn" onclick="filterNetworks('open', this)">مفتوحة</button>
-                    <button class="filter-btn" onclick="filterNetworks('5g', this)">5GHz</button>
-                </div>
-            </div>
-            <div class="networks-list" id="networksList">
-                <div class="empty-networks">
-                    <span>📡</span>
-                    <p>جارٍ البحث عن الشبكات...</p>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-title">تنبيه الشبكات غير الآمنة</div>
+                        <div class="setting-desc">تحذير عند وجود شبكات مفتوحة</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="securityAlertToggle" checked onchange="toggleSecurityAlerts()">
+                        <span class="slider"></span>
+                    </label>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Network Details Modal -->
+    <!-- نافذة تفاصيل الشبكة -->
     <div class="modal" id="networkModal" style="display:none">
-        <div class="modal-content">
+        <div class="modal-content glass-card">
             <div class="modal-header">
                 <h3 id="modalTitle">تفاصيل الشبكة</h3>
-                <button class="btn-close" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
+                <button class="btn-close" onclick="closeModal()">
+                    <i class="fas fa-xmark"></i>
+                </button>
             </div>
             <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
+    <!-- إشعارات -->
     <div class="toast" id="toast"></div>
 
     <script src="scanner.js"></script>
-    <script src="visualizer.js"></script>
-    <script src="speedtest.js"></script>
-    <script src="security.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// 📡 WiFi Analyzer Pro - Main App
+// 📡 WiFi Access Pro - Main App
 function initParticles() {
     const container = document.getElementById('particlesContainer');
     const colors = ['#00ffcc', '#6366f1', '#ff44aa'];
@@ -19,11 +19,18 @@ function initParticles() {
     }
 }
 
-// Initialize app
+// تهيئة التطبيق
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     initScanner();
-    initVisualizer();
     
-    console.log('📡 WiFi Analyzer Pro initialized');
+    console.log('📡 WiFi Access Pro initialized');
+    console.log('🔍 Scanning for nearby networks...');
 });
+
+// معالجة الأخطاء
+window.onerror = function(msg, url, line, col, error) {
+    console.error('Error:', msg);
+    showToast('⚠️ حدث خطأ غير متوقع');
+    return false;
+};

@@ -1,1 +1,1 @@
-initParticles();initVisualizer();initScanner();initFilters();
+initParticles();initVisualizer();initScanner();initFilters();document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});

@@ -1,0 +1,3 @@
+function toggleSettings(){const p=document.getElementById('settingsPanel');p.style.display=p.style.display==='none'?'block':'none';document.getElementById('btnSettings').classList.toggle('active',p.style.display==='block');loadSettingsToUI()}
+function loadSettingsToUI(){const s=loadSettings();document.getElementById('autoScanSetting').checked=s.autoScan;document.getElementById('scanInterval').value=s.scanInterval;document.getElementById('soundEnabled').checked=s.soundEnabled}
+function updateSettings(){const s={autoScan:document.getElementById('autoScanSetting').checked,scanInterval:parseInt(document.getElementById('scanInterval').value)||10,soundEnabled:document.getElementById('soundEnabled').checked};saveSettings(s);showToast('✅ تم حفظ الإعدادات')}

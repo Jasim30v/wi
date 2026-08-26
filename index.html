@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>📡 NetScan 2044</title>
+    <title>🌍 Social NetScan Pro - فاحص الملفات الحقيقي</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="bg-void"></div>
+    <div class="bg-grid"></div>
     <div class="bg-ring bg-ring-1"></div>
     <div class="bg-ring bg-ring-2"></div>
     <div class="bg-ring bg-ring-3"></div>
@@ -19,127 +20,115 @@
         <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <div class="logo">📡</div>
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
                 <div class="header-text">
-                    <h1>NetScan 2044</h1>
-                    <span>✦ WiFi Analyzer ✦</span>
+                    <h1>Social NetScan Pro</h1>
+                    <span>✦ REAL VERIFIER ✦</span>
                 </div>
             </div>
             <div class="header-right">
-                <button class="btn-icon" onclick="toggleSpeedTest()" id="btnSpeed"><i class="fas fa-gauge-high"></i></button>
-                <button class="btn-icon" onclick="toggleChannels()" id="btnChannels"><i class="fas fa-chart-bar"></i></button>
-                <button class="btn-icon" onclick="refreshScan()" id="btnRefresh"><i class="fas fa-rotate"></i></button>
+                <button class="btn-icon" onclick="toggleFilters()" id="btnFilters" title="الفلاتر">
+                    <i class="fas fa-filter"></i>
+                </button>
+                <button class="btn-icon" onclick="toggleHistory()" id="btnHistory" title="السجل">
+                    <i class="fas fa-history"></i>
+                </button>
+                <button class="btn-icon" onclick="toggleSettings()" id="btnSettings" title="الإعدادات">
+                    <i class="fas fa-cog"></i>
+                </button>
             </div>
         </div>
 
-        <!-- Network Stats -->
-        <div class="stats-grid">
+        <!-- URL Input Section -->
+        <div class="url-input-section">
+            <div class="url-input-container">
+                <input type="url" class="url-input" id="profileUrl" placeholder="الصق رابط الملف الشخصي هنا..." />
+                <button class="btn-check" onclick="checkProfile()" id="checkBtn">
+                    <i class="fas fa-search"></i> فحص
+                </button>
+            </div>
+            <div class="url-hints">
+                <span>🎵 tiktok.com/@username</span>
+                <span>📸 instagram.com/username</span>
+                <span>🐦 twitter.com/username</span>
+                <span>🐙 github.com/username</span>
+            </div>
+        </div>
+
+        <!-- Verification Result -->
+        <div class="verify-result" id="verifyResult" style="display:none">
+            <div class="verify-header">
+                <div class="verify-icon" id="verifyIcon">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <div class="verify-info">
+                    <div class="verify-status" id="verifyStatus">جاري الفحص...</div>
+                    <div class="verify-details" id="verifyDetails"></div>
+                </div>
+            </div>
+            <div class="verify-progress">
+                <div class="verify-progress-fill" id="verifyProgressFill"></div>
+            </div>
+            <div class="verify-steps" id="verifySteps"></div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
             <div class="stat-card">
-                <div class="stat-icon">📶</div>
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
                 <div class="stat-info">
-                    <div class="stat-value" id="networkCount">0</div>
-                    <div class="stat-label">الشبكات</div>
+                    <div class="stat-value" id="totalProfiles">0</div>
+                    <div class="stat-label">الملفات</div>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">🔒</div>
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                 <div class="stat-info">
-                    <div class="stat-value" id="secureCount">0</div>
-                    <div class="stat-label">مؤمنة</div>
+                    <div class="stat-value" id="realProfiles">0</div>
+                    <div class="stat-label">حقيقية</div>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">⚡</div>
+                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
                 <div class="stat-info">
-                    <div class="stat-value" id="avgSignal">0%</div>
-                    <div class="stat-label">متوسط الإشارة</div>
+                    <div class="stat-value" id="fakeProfiles">0</div>
+                    <div class="stat-label">وهمية</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-globe-americas"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="countriesCount">0</div>
+                    <div class="stat-label">دول</div>
                 </div>
             </div>
         </div>
 
-        <!-- Signal Radar -->
-        <div class="radar-container">
-            <canvas id="radarCanvas"></canvas>
-            <div class="radar-overlay">
-                <div class="radar-center">📡</div>
-                <div class="radar-text" id="radarStatus">جارٍ المسح...</div>
+        <!-- Profile List -->
+        <div class="playlist-section">
+            <div class="playlist-header">
+                <h3><i class="fas fa-list"></i> الملفات المفحوصة</h3>
+                <span class="profile-stats" id="profileStats">0 ملف</span>
             </div>
-        </div>
-
-        <!-- Scan Controls -->
-        <div class="scan-controls">
-            <button class="scan-btn" id="scanBtn" onclick="startScan()">
-                <i class="fas fa-wifi"></i> بدء المسح
-            </button>
-            <button class="scan-btn secondary" onclick="scanSpecific()">
-                <i class="fas fa-crosshairs"></i> مسح محدد
-            </button>
-        </div>
-
-        <!-- Speed Test Panel -->
-        <div class="speed-panel" id="speedPanel" style="display:none">
-            <div class="panel-header">
-                <h3>⚡ اختبار السرعة</h3>
-                <button class="btn-action" onclick="startSpeedTest()">🔄 اختبار</button>
-            </div>
-            <div class="speed-gauge" id="speedGauge">
-                <div class="gauge-value" id="speedValue">0.0</div>
-                <div class="gauge-unit">Mbps</div>
-            </div>
-            <div class="speed-details">
-                <div class="speed-item">
-                    <span>⬇ التحميل</span>
-                    <span id="downloadSpeed">-- Mbps</span>
-                </div>
-                <div class="speed-item">
-                    <span>⬆ الرفع</span>
-                    <span id="uploadSpeed">-- Mbps</span>
-                </div>
-                <div class="speed-item">
-                    <span>📊 Ping</span>
-                    <span id="pingValue">-- ms</span>
-                </div>
-            </div>
-            <div class="progress-track" id="speedProgressTrack">
-                <div class="progress-fill" id="speedProgress"></div>
-            </div>
-        </div>
-
-        <!-- Channel Analyzer -->
-        <div class="channels-panel" id="channelsPanel" style="display:none">
-            <div class="panel-header">
-                <h3>📊 تحليل القنوات</h3>
-            </div>
-            <div class="channels-chart" id="channelsChart">
-                <!-- Channel bars will be rendered here -->
-            </div>
-        </div>
-
-        <!-- Network List -->
-        <div class="networks-section">
-            <div class="networks-header">
-                <h3>📋 الشبكات المكتشفة</h3>
-                <span id="scanTime" class="scan-time">آخر مسح: --</span>
-            </div>
-            <div class="networks-list" id="networksList">
-                <div class="empty-state">
-                    <span>📡</span>
-                    <p>اضغط "بدء المسح" لاكتشاف الشبكات</p>
+            <div class="playlist" id="profileList">
+                <div class="empty-playlist">
+                    <span>🔍</span>
+                    <p>الصق رابط ملف شخصي للفحص</p>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Network Details Modal -->
-        <div class="modal" id="networkModal" style="display:none">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="modalTitle">تفاصيل الشبكة</h3>
-                    <button class="btn-close" onclick="closeModal()">✕</button>
-                </div>
-                <div class="modal-body" id="modalBody">
-                    <!-- Network details will be rendered here -->
-                </div>
+    <!-- Profile Details Modal -->
+    <div class="modal" id="profileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">تفاصيل الملف</h3>
+                <button class="btn-close" onclick="closeModal()">✕</button>
             </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
@@ -147,9 +136,7 @@
 
     <script src="storage.js"></script>
     <script src="particles.js"></script>
-    <script src="radar.js"></script>
-    <script src="scanner.js"></script>
-    <script src="speedtest.js"></script>
+    <script src="urlChecker.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

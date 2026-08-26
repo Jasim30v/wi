@@ -1,22 +1,12 @@
 initParticles();
-initRadar();
+initScanner();
 
-// Load saved networks
-networks=loadNetworks();
-if(networks.length){
-    updateUI();
-    document.getElementById('radarStatus').textContent='تم تحميل '+networks.length+' شبكة';
-}
-
-// Close modal on outside click
-document.getElementById('networkModal').addEventListener('click',function(e){
-    if(e.target===this)closeModal();
+// إضافة معالج ضغط Enter
+document.getElementById('profileUrl').addEventListener('keypress',function(e){
+    if(e.key==='Enter')checkProfile();
 });
 
-// Keyboard shortcut for scan
+// إغلاق المودال بزر Escape
 document.addEventListener('keydown',function(e){
-    if(e.key==='s'&&e.ctrlKey){
-        e.preventDefault();
-        startScan();
-    }
+    if(e.key==='Escape')closeModal();
 });

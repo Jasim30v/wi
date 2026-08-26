@@ -1,20 +1,293 @@
-let networks=[],currentScan=null,isAutoScan=false,autoScanInterval=null;
-function initScanner(){networks=loadNetworks();renderNetworks();updateVisualizer();updateStats()}
-function startScan(){if(currentScan)return;const btn=document.getElementById('scanBtn');btn.classList.add('scanning');document.getElementById('scanIcon').className='fas fa-spinner fa-spin';document.getElementById('scanStatus').textContent='جاري المسح...';const startTime=Date.now();const totalDuration=3000;const progressInterval=setInterval(()=>{const elapsed=Date.now()-startTime;const progress=Math.min(100,(elapsed/totalDuration)*100);document.getElementById('progressFill').style.width=progress+'%';document.getElementById('progressPercent').textContent=Math.floor(progress)+'%';document.getElementById('scanDuration').textContent=formatTime(Math.floor(elapsed/1000))},100);setTimeout(()=>{clearInterval(progressInterval);performScan();document.getElementById('progressFill').style.width='100%';document.getElementById('progressPercent').textContent='100%';setTimeout(()=>{document.getElementById('progressFill').style.width='0%';document.getElementById('progressPercent').textContent='0%'},500)},totalDuration)}
-function performScan(){const mockNetworks=generateMockNetworks();networks=[...mockNetworks,...networks.filter(n=>!mockNetworks.find(m=>m.mac===n.mac))];saveNetworks(networks);renderNetworks();updateVisualizer();updateStats();addToHistory({time:new Date().toISOString(),count:mockNetworks.length});renderHistory();const btn=document.getElementById('scanBtn');btn.classList.remove('scanning');document.getElementById('scanIcon').className='fas fa-search';document.getElementById('scanStatus').textContent='اكتمل المسح';document.getElementById('networkCount').textContent=networks.length+' شبكة';document.getElementById('lastScan').textContent='آخر مسح: '+new Date().toLocaleTimeString('ar');showToast('✅ تم اكتشاف '+mockNetworks.length+' شبكة');if(loadSettings().soundEnabled){playNotificationSound()}}
-function generateMockNetworks(){const prefixes=['Home','Office','Guest','IoT','Smart','5G','Fiber','Net','WiFi','TP-Link','D-Link','Cisco','Netgear','ASUS','Xiaomi'];const securities=['WPA2','WPA3','WPA/WPA2','WEP','Open'];const networks=[];const count=Math.floor(Math.random()*15)+10;for(let i=0;i<count;i++){const is5GHz=Math.random()>0.4;const freq=is5GHz?'5 GHz':'2.4 GHz';const channel=is5GHz?Math.floor(Math.random()*20)+36:Math.floor(Math.random()*11)+1;const signal=Math.floor(Math.random()*70)+30;const isHidden=Math.random()<0.1;networks.push({id:Date.now()+i+'_'+Math.random(),ssid:isHidden?'<Hidden Network>':prefixes[Math.floor(Math.random()*prefixes.length)]+'_'+Math.floor(Math.random()*1000),mac:generateMAC(),signal:signal,frequency:freq,channel:channel,security:securities[Math.floor(Math.random()*securities.length)],encryption:Math.random()>0.3?'AES':'TKIP',maxSpeed:is5GHz?'1.3 Gbps':'450 Mbps',firstSeen:new Date().toISOString(),lastSeen:new Date().toISOString(),hidden:isHidden})}return networks}
-function generateMAC(){const hex='0123456789ABCDEF';let mac='';for(let i=0;i<6;i++){if(i>0)mac+=':';mac+=hex[Math.floor(Math.random()*16)]+hex[Math.floor(Math.random()*16)]}return mac}
-function toggleAutoScan(){const settings=loadSettings();isAutoScan=!isAutoScan;settings.autoScan=isAutoScan;saveSettings(settings);document.getElementById('autoScanBtn').classList.toggle('active',isAutoScan);if(isAutoScan){showToast('🔄 المسح التلقائي مفعل');autoScanInterval=setInterval(startScan,settings.scanInterval*1000)}else{showToast('⏸ المسح التلقائي متوقف');if(autoScanInterval)clearInterval(autoScanInterval)}}
-function sortNetworks(){networks.sort((a,b)=>b.signal-a.signal);renderNetworks();showToast('📊 تم الترتيب حسب قوة الإشارة')}
-function clearNetworks(){if(confirm('هل تريد مسح جميع الشبكات؟')){networks=[];saveNetworks(networks);renderNetworks();updateVisualizer();updateStats();showToast('🗑 تم مسح الشبكات')}}
-function exportData(){const data={exportTime:new Date().toISOString(),totalNetworks:networks.length,networks:networks};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='wifi_scan_'+Date.now()+'.json';a.click();URL.revokeObjectURL(url);showToast('📥 تم تصدير البيانات')}
-function renderNetworks(){const c=document.getElementById('networkList');if(!networks.length){c.innerHTML='<div class="empty-playlist"><span>📡</span><p>اضغط زر المسح لبدء اكتشاف الشبكات</p></div>';document.getElementById('networkStats').textContent='0 شبكة';return}const filtered=getFilteredNetworks();document.getElementById('networkStats').textContent=filtered.length+' شبكة';c.innerHTML=filtered.map(n=>{const signalBars=generateSignalBars(n.signal);const securityIcon=getSecurityIcon(n.security);return `<div class="network-item" onclick="showNetworkDetails('${n.id}')"><div class="n-icon">${securityIcon}</div><div class="n-info"><div class="n-name">${n.ssid}</div><div class="n-details">${n.frequency} • Ch ${n.channel} • ${n.security}</div></div><div class="n-signal">${signalBars}<span class="signal-percent">${n.signal}%</span></div><span class="n-del" onclick="event.stopPropagation();deleteNetwork('${n.id}')"><i class="fas fa-times"></i></span></div>`}).join('')}
-function generateSignalBars(signal){const bars=Math.ceil(signal/25);let html='<div class="signal-bars">';for(let i=0;i<4;i++){const height=[6,12,18,24][i];html+=`<div class="signal-bar" style="height:${height}px;opacity:${i<bars?1:0.2}"></div>`}html+='</div>';return html}
-function getSecurityIcon(security){if(security==='Open')return '🔓';if(security==='WEP')return '⚠️';if(security==='WPA3')return '🛡️';return '🔒'}
-function deleteNetwork(id){networks=networks.filter(n=>n.id!==id);saveNetworks(networks);renderNetworks();updateVisualizer();updateStats();showToast('🗑 تم حذف الشبكة')}
-function showNetworkDetails(id){const n=networks.find(n=>n.id===id);if(!n)return;document.getElementById('modalTitle').textContent=n.ssid;document.getElementById('modalBody').innerHTML=`<div class="modal-item"><span class="label">🔒 الأمان</span><span class="value">${n.security}</span></div><div class="modal-item"><span class="label">📶 الإشارة</span><span class="value">${n.signal}%</span></div><div class="modal-item"><span class="label">📡 التردد</span><span class="value">${n.frequency}</span></div><div class="modal-item"><span class="label">🔢 القناة</span><span class="value">${n.channel}</span></div><div class="modal-item"><span class="label">💻 MAC</span><span class="value">${n.mac}</span></div><div class="modal-item"><span class="label">⚡ السرعة</span><span class="value">${n.maxSpeed}</span></div><div class="modal-item"><span class="label">🔐 التشفير</span><span class="value">${n.encryption}</span></div>`;document.getElementById('networkModal').classList.add('active')}
-function closeModal(){document.getElementById('networkModal').classList.remove('active')}
-function updateStats(){document.getElementById('totalNetworks').textContent=networks.length;const secure=networks.filter(n=>n.security!=='Open').length;const open=networks.filter(n=>n.security==='Open').length;document.getElementById('secureNetworks').textContent=secure;document.getElementById('openNetworks').textContent=open;const avgSignal=networks.length?Math.round(networks.reduce((sum,n)=>sum+n.signal,0)/networks.length):0;document.getElementById('avgSignal').textContent=avgSignal+'%'}
-function updateVisualizer(){updateVizData(networks)}
-function playNotificationSound(){try{const audioCtx=new(window.AudioContext||window.webkitAudioContext)();const oscillator=audioCtx.createOscillator();const gainNode=audioCtx.createGain();oscillator.connect(gainNode);gainNode.connect(audioCtx.destination);oscillator.frequency.value=800;gainNode.gain.value=0.3;oscillator.start();setTimeout(()=>{oscillator.stop();audioCtx.close()},200)}catch(e){}}
-function formatTime(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)}
+let networks=[],scanInterval=null,isScanning=false;
+
+function startScan(){
+    if(isScanning)return;
+    isScanning=true;
+    document.getElementById('scanBtn').innerHTML='<i class="fas fa-spinner fa-spin"></i> جارٍ المسح...';
+    document.getElementById('btnRefresh').classList.add('spinning');
+    document.getElementById('radarStatus').textContent='جارٍ المسح...';
+    
+    // Clear previous results
+    networks=[];
+    updateUI();
+    
+    // Check if Web Bluetooth API is available
+    if(navigator.bluetooth){
+        scanWithBluetooth();
+    }else{
+        // Fallback to mock data or show instructions
+        showToast('⚠️ متصفحك لا يدعم فحص WiFi');
+        generateMockNetworks();
+        setTimeout(()=>{
+            isScanning=false;
+            document.getElementById('scanBtn').innerHTML='<i class="fas fa-wifi"></i> بدء المسح';
+            document.getElementById('btnRefresh').classList.remove('spinning');
+            document.getElementById('radarStatus').textContent='اكتمل المسح';
+        },3000);
+    }
+}
+
+function scanWithBluetooth(){
+    // Note: Web Bluetooth doesn't directly scan WiFi
+    // This is a placeholder for actual implementation
+    // In real implementation, you'd use a backend service
+    
+    // Simulate scanning
+    scanInterval=setInterval(()=>{
+        if(networks.length<10){
+            addMockNetwork();
+        }else{
+            clearInterval(scanInterval);
+            finishScan();
+        }
+    },500);
+}
+
+function addMockNetwork(){
+    const ssids=['Home_5G','Office_WiFi','Cafe_Free','Guest_Network','AP_2044','TechHub','SmartHome','IoT_Device','Neighbor_Net','Public_WiFi'];
+    const encryptions=['WPA2','WPA3','WEP','Open','WPA2-PSK'];
+    const randomSsid=ssids[Math.floor(Math.random()*ssids.length)]+Math.floor(Math.random()*100);
+    const randomEnc=encryptions[Math.floor(Math.random()*encryptions.length)];
+    const randomSignal=Math.floor(Math.random()*100)-100; // -100 to 0 dBm
+    const randomChannel=Math.floor(Math.random()*11)+1;
+    
+    const network={
+        id:Date.now()+Math.random(),
+        ssid:randomSsid,
+        bssid:generateMac(),
+        signalStrength:randomSignal,
+        security:randomEnc,
+        channel:randomChannel,
+        frequency:randomChannel<=13?2400+randomChannel*5:5000+randomChannel*5,
+        capabilities:randomEnc,
+        detectedAt:new Date().toISOString()
+    };
+    
+    // Check if network already exists
+    if(!networks.find(n=>n.ssid===network.ssid)){
+        networks.push(network);
+        updateUI();
+    }
+}
+
+function generateMac(){
+    const hex='0123456789ABCDEF';
+    let mac='';
+    for(let i=0;i<6;i++){
+        if(i>0)mac+=':';
+        mac+=hex[Math.floor(Math.random()*16)]+hex[Math.floor(Math.random()*16)];
+    }
+    return mac;
+}
+
+function generateMockNetworks(){
+    const ssids=['Home_5G','Office_WiFi','Cafe_Free','Guest_Network','AP_2044','TechHub','SmartHome','IoT_Device','Neighbor_Net','Public_WiFi','Library_WiFi','Restaurant_Net'];
+    const encryptions=['WPA2','WPA3','WEP','Open','WPA2-PSK','WPA2-Enterprise'];
+    
+    for(let i=0;i<12;i++){
+        const network={
+            id:Date.now()+i+Math.random(),
+            ssid:ssids[i],
+            bssid:generateMac(),
+            signalStrength:Math.floor(Math.random()*100)-100,
+            security:encryptions[Math.floor(Math.random()*encryptions.length)],
+            channel:Math.floor(Math.random()*11)+1,
+            frequency:0,
+            capabilities:encryptions[Math.floor(Math.random()*encryptions.length)],
+            detectedAt:new Date().toISOString()
+        };
+        network.frequency=network.channel<=13?2400+network.channel*5:5000+network.channel*5;
+        networks.push(network);
+    }
+    updateUI();
+}
+
+function finishScan(){
+    isScanning=false;
+    document.getElementById('scanBtn').innerHTML='<i class="fas fa-wifi"></i> بدء المسح';
+    document.getElementById('btnRefresh').classList.remove('spinning');
+    document.getElementById('radarStatus').textContent='تم اكتشاف '+networks.length+' شبكة';
+    document.getElementById('scanTime').textContent='آخر مسح: '+new Date().toLocaleTimeString('ar');
+    
+    // Save to history
+    const history=loadHistory();
+    history.push({timestamp:new Date().toISOString(),count:networks.length});
+    saveHistory(history);
+    
+    showToast('✅ اكتمل المسح: '+networks.length+' شبكة');
+}
+
+function refreshScan(){
+    if(!isScanning){
+        startScan();
+    }
+}
+
+function scanSpecific(){
+    const target=prompt('أدخل اسم الشبكة (SSID):');
+    if(target){
+        showToast('🔍 البحث عن: '+target);
+        setTimeout(()=>{
+            const found=networks.find(n=>n.ssid.toLowerCase().includes(target.toLowerCase()));
+            if(found){
+                showNetworkDetails(found.id);
+            }else{
+                showToast('❌ لم يتم العثور على الشبكة');
+            }
+        },1000);
+    }
+}
+
+function updateUI(){
+    // Update stats
+    document.getElementById('networkCount').textContent=networks.length;
+    const secureCount=networks.filter(n=>n.security!=='Open').length;
+    document.getElementById('secureCount').textContent=secureCount;
+    const avgSignal=networks.length?Math.round(networks.reduce((sum,n)=>sum+n.signalStrength,0)/networks.length):0;
+    document.getElementById('avgSignal').textContent=avgSignal+'%';
+    
+    // Update radar
+    updateRadar(networks);
+    
+    // Render network list
+    renderNetworks();
+    
+    // Update channels
+    renderChannels();
+    
+    // Save networks
+    saveNetworks(networks);
+}
+
+function renderNetworks(){
+    const container=document.getElementById('networksList');
+    if(!networks.length){
+        container.innerHTML='<div class="empty-state"><span>📡</span><p>اضغط "بدء المسح" لاكتشاف الشبكات</p></div>';
+        return;
+    }
+    
+    // Sort by signal strength
+    const sorted=[...networks].sort((a,b)=>b.signalStrength-a.signalStrength);
+    
+    container.innerHTML=sorted.map(net=>{
+        const signalStrength=net.signalStrength;
+        const signalPercent=Math.abs(signalStrength); // Convert to positive percentage
+        const bars=getSignalBars(signalPercent);
+        
+        return `<div class="network-item" onclick="showNetworkDetails('${net.id}')">
+            <div class="n-icon">${getSecurityIcon(net.security)}</div>
+            <div class="n-info">
+                <div class="n-name">${net.ssid}</div>
+                <div class="n-details">${net.security} • قناة ${net.channel}</div>
+            </div>
+            <div class="n-signal">
+                <div class="signal-bars">${bars}</div>
+                <span>${signalPercent}%</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function getSignalBars(percent){
+    const barCount=Math.ceil(percent/25);
+    let bars='';
+    for(let i=0;i<4;i++){
+        if(i<barCount){
+            bars+='<span style="background:'+(percent>70?'#00ffcc':percent>40?'#ffaa00':'#ff44aa')+'"></span>';
+        }else{
+            bars+='<span style="background:rgba(255,255,255,0.1)"></span>';
+        }
+    }
+    return bars;
+}
+
+function getSecurityIcon(security){
+    if(security==='Open')return '🔓';
+    if(security.includes('WPA3'))return '🛡️';
+    return '🔒';
+}
+
+function renderChannels(){
+    const container=document.getElementById('channelsChart');
+    if(!container)return;
+    
+    const channels={};
+    networks.forEach(net=>{
+        channels[net.channel]=(channels[net.channel]||0)+1;
+    });
+    
+    container.innerHTML=Array.from({length:14},(_,i)=>{
+        const channel=i+1;
+        const count=channels[channel]||0;
+        const height=count?Math.min(100,count*20):2;
+        const color=count>5?'#ff44aa':count>2?'#ffaa00':'#00ffcc';
+        
+        return `<div class="channel-bar">
+            <div class="bar" style="height:${height}px;background:linear-gradient(to top,${color},${color}88)"></div>
+            <div class="label">${channel}</div>
+        </div>`;
+    }).join('');
+}
+
+function showNetworkDetails(id){
+    const net=networks.find(n=>n.id===id);
+    if(!net)return;
+    
+    document.getElementById('modalTitle').textContent=net.ssid;
+    document.getElementById('modalBody').innerHTML=`
+        <div class="detail-row">
+            <span class="detail-label">SSID</span>
+            <span class="detail-value">${net.ssid}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">BSSID (MAC)</span>
+            <span class="detail-value">${net.bssid}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">قوة الإشارة</span>
+            <span class="detail-value">${net.signalStrength} dBm (${Math.abs(net.signalStrength)}%)</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">التشفير</span>
+            <span class="detail-value">${net.security}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">القناة</span>
+            <span class="detail-value">${net.channel}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">التردد</span>
+            <span class="detail-value">${net.frequency} MHz</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">وقت الاكتشاف</span>
+            <span class="detail-value">${new Date(net.detectedAt).toLocaleTimeString('ar')}</span>
+        </div>
+    `;
+    
+    document.getElementById('networkModal').style.display='flex';
+}
+
+function closeModal(){
+    document.getElementById('networkModal').style.display='none';
+}
+
+function toggleSpeedTest(){
+    const panel=document.getElementById('speedPanel');
+    panel.style.display=panel.style.display==='none'?'block':'none';
+    document.getElementById('btnSpeed').classList.toggle('active',panel.style.display==='block');
+}
+
+function toggleChannels(){
+    const panel=document.getElementById('channelsPanel');
+    panel.style.display=panel.style.display==='none'?'block':'none';
+    document.getElementById('btnChannels').classList.toggle('active',panel.style.display==='block');
+    if(panel.style.display==='block')renderChannels();
+}
+
+function showToast(message){
+    const toast=document.getElementById('toast');
+    toast.textContent=message;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2500);
+}

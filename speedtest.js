@@ -1,64 +1,57 @@
-// 🚀 Speed Test
-let isTesting = false;
-let testInterval = null;
+let speedTestRunning=false;
 
-function toggleSpeedTest() {
-    const panel = document.getElementById('speedPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    document.getElementById('btnSpeed').classList.toggle('active', panel.style.display === 'block');
-}
-
-function startSpeedTest() {
-    if (isTesting) return;
+function startSpeedTest(){
+    if(speedTestRunning)return;
+    speedTestRunning=true;
     
-    isTesting = true;
-    const btn = document.getElementById('btnStartTest');
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاختبار...';
-    btn.disabled = true;
+    const progressFill=document.getElementById('speedProgress');
+    const speedValue=document.getElementById('speedValue');
+    const downloadSpeed=document.getElementById('downloadSpeed');
+    const uploadSpeed=document.getElementById('uploadSpeed');
+    const pingValue=document.getElementById('pingValue');
     
-    // Reset values
-    document.getElementById('downloadSpeed').textContent = '0';
-    document.getElementById('uploadSpeed').textContent = '0';
-    document.getElementById('pingValue').textContent = '0';
-    document.getElementById('speedProgressBar').style.width = '0%';
+    progressFill.style.width='0%';
+    speedValue.textContent='0.0';
+    downloadSpeed.textContent='-- Mbps';
+    uploadSpeed.textContent='-- Mbps';
+    pingValue.textContent='-- ms';
     
-    // Simulate speed test
-    let progress = 0;
-    let download = 0;
-    let upload = 0;
-    let ping = 0;
+    showToast('⚡ بدء اختبار السرعة...');
     
-    testInterval = setInterval(() => {
-        progress += Math.random() * 5;
-        
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(testInterval);
-            isTesting = false;
-            btn.innerHTML = '<i class="fas fa-play"></i> بدء الاختبار';
-            btn.disabled = false;
+    // Simulate ping test
+    setTimeout(()=>{
+        const ping=Math.floor(Math.random()*50)+10;
+        pingValue.textContent=ping+' ms';
+        progressFill.style.width='20%';
+    },500);
+    
+    // Simulate download test
+    let progress=20;
+    const downloadInterval=setInterval(()=>{
+        progress+=5;
+        progressFill.style.width=progress+'%';
+        const download=Math.random()*80+20;
+        speedValue.textContent=download.toFixed(1);
+        if(progress>=60){
+            clearInterval(downloadInterval);
+            const finalDownload=Math.random()*80+40;
+            downloadSpeed.textContent=finalDownload.toFixed(1)+' Mbps';
+            speedValue.textContent=finalDownload.toFixed(1);
             
-            // Final values
-            download = (Math.random() * 100 + 50).toFixed(1);
-            upload = (Math.random() * 30 + 10).toFixed(1);
-            ping = Math.floor(Math.random() * 40 + 10);
-            
-            document.getElementById('downloadSpeed').textContent = download;
-            document.getElementById('uploadSpeed').textContent = upload;
-            document.getElementById('pingValue').textContent = ping;
-            
-            showToast('✅ اكتمل اختبار السرعة');
-        } else {
-            // Update values during test
-            download = (Math.random() * 100 + 50).toFixed(1);
-            upload = (Math.random() * 30 + 10).toFixed(1);
-            ping = Math.floor(Math.random() * 40 + 10);
-            
-            document.getElementById('downloadSpeed').textContent = download;
-            document.getElementById('uploadSpeed').textContent = upload;
-            document.getElementById('pingValue').textContent = ping;
+            // Simulate upload test
+            let uploadProgress=60;
+            const uploadInterval=setInterval(()=>{
+                uploadProgress+=5;
+                progressFill.style.width=uploadProgress+'%';
+                const upload=Math.random()*30+10;
+                if(uploadProgress>=100){
+                    clearInterval(uploadInterval);
+                    uploadSpeed.textContent=upload.toFixed(1)+' Mbps';
+                    progressFill.style.width='100%';
+                    speedTestRunning=false;
+                    showToast('✅ اكتمل اختبار السرعة');
+                }
+            },300);
         }
-        
-        document.getElementById('speedProgressBar').style.width = progress + '%';
-    }, 500);
+    },300);
 }

@@ -1,668 +1,564 @@
-#!/usr/bin/env python3
-"""
-╔══════════════════════════════════════════════════════════════╗
-║  🔥  WiFi Hacker Pro - Build All APK + PWA 🔥            ║
-║     بناء تطبيق كامل مع Service Worker                     ║
-║     لتشغيل Offline وكتطبيق مستقل على Android              ║
-╚══════════════════════════════════════════════════════════════╝
-"""
+name: 👑 Build APK - Ultra
 
-import os
-import json
-import shutil
-import subprocess
-import sys
-import base64
-from pathlib import Path
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: '📱 اسم التطبيق'
+        required: true
+        default: 'Dark AI'
+        type: string
+      app_id:
+        description: '🆔 App ID (مثال: com.darkai.app)'
+        required: true
+        default: 'com.darkai.app'
+        type: string
+      app_color:
+        description: '🎨 لون خلفية التطبيق (مثال: #000000 للأسود)'
+        required: true
+        default: '#000000'
+        type: string
+      icon_file:
+        description: '🖼️ اسم ملف الأيقونة PNG (ضع الملف في مجلد المشروع)'
+        required: true
+        default: 'icon.png'
+        type: string
+      site_folder:
+        description: '📁 مجلد موقع الويب (اتركه فارغاً للمجلد الرئيسي)'
+        required: false
+        default: ''
+        type: string
+      splash_duration:
+        description: '⏱️ مدة شاشة البداية (بالمللي ثانية)'
+        required: false
+        default: '2000'
+        type: string
+      version_name:
+        description: '📌 إصدار التطبيق (مثال: 1.0.0)'
+        required: false
+        default: '1.0.0'
+        type: string
 
-# ============================================
-# التكوين
-# ============================================
-ROOT_DIR = "gtheb"
-APK_NAME = "WiFiHackerPro"
-ICON_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAAw5JREFUWIXtl11oE1cQx3+zu0k0MZqY1lZrq9VqKVSKCgkpCkIQIYhCkUfBFx/6YFEoofTBBwsKIlgKwhOEviiCgq/1QUFQpFTpizQKpSlaCqWk2VxtmlZtNc3uTu/DQzRNb3b3zq5pk+BfwszZcz7zz8y5Z2YNAG+DAJD9P9v/1k3h7/hnBgAAvN1rADB2bjPLywudMnftwWX3RrH5TUb/PwwJAPCsmxm8Y5sZAAAMpQS2bM3Htmr0rC3XcBbnOa6nzWa9WGADwPc/eHnuLBeWox11AiMjBjPALIMhhY02R1i3SQHASD8BALihMJov4ecVizsnJLZ5CfVpP1/G0H8OAWwXGNEVtoBkgEpu6S17Zr5Yr4uQm6OBTRsOCg1L4om6+UK/9sk91w9d8aMSSnPYLwT/xV6YdvH8ssQ0EZZDf0Dd8n7VXX8oADAE3z1Z/f6Fisr4WMFmqUz8HwEaEn0ChFwCQIZT4NW56gPqqAXetwAAaNW8yEAoKxUoQKtO2/9F0yZ8ShXK5xRbrzseAAC2UMh78RaLHh4IMi0wKiN9wcQ5W6eb6eUWj/vgR2u7xj78Rskt3b6Gd03v6z12xn55OyoqW/TRu8MpZigAfvhDANCDw2R4dPO6lYqQ61b9HcgCoVfRcCjF8rDd2xUmWwRrV+j9d0sCEz9+UAD4foG9a6u4hZOUhaSc69J9T3he2KXWjf2WwXPltqPn/D8DKgAo95S0DCgg4GchQ9qle2qjM0vU2n7V6CkvC1C9bQD2YWiDvtUY4OmvaFHYA+1K2/FdYVv1egovrtz3reAMFe3TT5YhM1sXqD1cVwQAL2/2bwLP7P+2Gahh58l6Bvi3WaL2rqsE7uUCACh7KtxaAt6OfKtq2xqgBQLbP9Uw3FjXro0PB98WAQDmBw8DAI3qWHnXhBpLT/dM/6lO4cLbdXv9NR4QoUeYIywg4gkPpAvJ3z4AAAAASUVORK5CYII="
+permissions:
+  contents: write
 
-# ============================================
-# إنشاء جميع الملفات
-# ============================================
+jobs:
+  build-apk:
+    name: 👑 بناء تطبيق ${{ github.event.inputs.app_name }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 تحميل المشروع بالكامل
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-def write_file(path, content):
-    os.makedirs(os.path.dirname(path) if os.path.dirname(path) else '.', exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
-    print(f"  ✅ {path}")
+      - name: ☕ تثبيت Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-def build_manifest():
-    """ملف manifest.json لتطبيق PWA"""
-    return {
-        "name": "WiFi Hacker Pro",
-        "short_name": "WiFiHack",
-        "description": "Ultimate WiFi Penetration Tool",
-        "start_url": "/index.html",
-        "display": "standalone",
-        "orientation": "portrait",
-        "background_color": "#0a0a15",
-        "theme_color": "#00ff88",
-        "icons": [
-            {
-                "src": "icon-192.png",
-                "sizes": "192x192",
-                "type": "image/png",
-                "purpose": "any maskable"
+      - name: 🟢 تثبيت Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 تثبيت Capacitor والأدوات
+        run: |
+          npm install -g @capacitor/cli @capacitor/core @capacitor/android
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: 📁 سحب وتجهيز جميع ملفات الموقع
+        run: |
+          echo "🔍 جاري سحب جميع ملفات المشروع..."
+          
+          # عرض جميع الملفات الموجودة في المشروع
+          echo "📋 جميع الملفات في المشروع:"
+          find . -type f -not -path './.git/*' -not -path './node_modules/*' | sort
+          
+          # إنشاء مجلد www
+          rm -rf www
+          mkdir -p www
+          
+          # تحديد مجلد المصدر
+          SOURCE_DIR="${{ github.event.inputs.site_folder }}"
+          if [ -z "$SOURCE_DIR" ]; then
+            SOURCE_DIR="."
+          fi
+          
+          echo ""
+          echo "📁 جاري نسخ الملفات من: $SOURCE_DIR"
+          
+          # نسخ جميع الملفات والمجلدات
+          if [ "$SOURCE_DIR" = "." ]; then
+            shopt -s dotglob
+            for item in "$SOURCE_DIR"/*; do
+              basename=$(basename "$item")
+              if [ "$basename" != ".git" ] && [ "$basename" != ".github" ] && [ "$basename" != "node_modules" ] && [ "$basename" != "android" ] && [ "$basename" != "ios" ] && [ "$basename" != "www" ] && [ "$basename" != "package.json" ] && [ "$basename" != "package-lock.json" ] && [ "$basename" != "capacitor.config.json" ]; then
+                echo "  📄 نسخ: $basename"
+                cp -r "$item" www/ 2>/dev/null || true
+              fi
+            done
+          else
+            if [ -d "$SOURCE_DIR" ]; then
+              echo "  ✅ المجلد $SOURCE_DIR موجود"
+              cp -r "$SOURCE_DIR"/* www/ 2>/dev/null || true
+              cp -r "$SOURCE_DIR"/.* www/ 2>/dev/null || true
+            else
+              echo "  ❌ المجلد $SOURCE_DIR غير موجود!"
+              shopt -s dotglob
+              for item in ./*; do
+                basename=$(basename "$item")
+                if [ "$basename" != ".git" ] && [ "$basename" != ".github" ] && [ "$basename" != "node_modules" ] && [ "$basename" != "android" ] && [ "$basename" != "ios" ] && [ "$basename" != "www" ] && [ "$basename" != "package.json" ] && [ "$basename" != "package-lock.json" ] && [ "$basename" != "capacitor.config.json" ]; then
+                  echo "  📄 نسخ: $basename"
+                  cp -r "$item" www/ 2>/dev/null || true
+                fi
+              done
+            fi
+          fi
+          
+          # حذف أي ملفات غير مرغوب فيها داخل www
+          rm -rf www/.git www/.github www/node_modules www/.gitignore 2>/dev/null || true
+          rm -rf www/package.json www/package-lock.json 2>/dev/null || true
+          rm -rf www/android www/ios www/capacitor.config.json 2>/dev/null || true
+          rm -rf www/icon.png www/icon.jpg www/icon.jpeg 2>/dev/null || true
+          
+          echo ""
+          echo "✅ تم نسخ جميع ملفات الموقع"
+          echo "📊 إحصائيات مجلد www:"
+          echo "  📁 عدد الملفات: $(find www -type f | wc -l)"
+          echo "  📂 عدد المجلدات: $(find www -type d | wc -l)"
+          echo "  💾 الحجم الإجمالي: $(du -sh www | cut -f1)"
+          
+          if [ -f "www/index.html" ]; then
+            echo ""
+            echo "✅ تم العثور على index.html"
+          else
+            echo ""
+            echo "⚠️ تحذير: لم يتم العثور على index.html!"
+          fi
+
+      - name: 📄 إنشاء package.json
+        run: |
+          cat > package.json << EOF
+          {
+            "name": "${{ github.event.inputs.app_name }}",
+            "version": "1.0.0",
+            "description": "تطبيق ${{ github.event.inputs.app_name }}",
+            "main": "www/index.html",
+            "scripts": {
+              "build": "echo 'Build complete'"
             },
-            {
-                "src": "icon-512.png",
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "any maskable"
+            "dependencies": {
+              "@capacitor/android": "^5.0.0",
+              "@capacitor/core": "^5.0.0",
+              "@capacitor/cli": "^5.0.0",
+              "@capacitor/filesystem": "^5.0.0",
+              "@capacitor/app": "^5.0.0",
+              "@capacitor/status-bar": "^5.0.0",
+              "@capacitor/splash-screen": "^5.0.0",
+              "@capacitor/keyboard": "^5.0.0",
+              "@capacitor/share": "^5.0.0"
             }
-        ]
-    }
+          }
+          EOF
 
-def build_sw_js():
-    """Service Worker - للتشغيل Offline والتحديثات التلقائية"""
-    return """// ============================================
-// 🔥 WiFi Hacker Pro - Service Worker v3.0
-// ============================================
-
-const CACHE_NAME = 'wifi-hacker-v3';
-const ASSETS = [
-    '/',
-    '/index.html',
-    '/style.css',
-    '/wifi_hack.js',
-    '/storage.js',
-    '/particles.js',
-    '/app.js',
-    '/manifest.json',
-    '/icon-192.png',
-    '/icon-512.png'
-];
-
-// تثبيت Service Worker
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('[SW] Caching assets...');
-                return cache.addAll(ASSETS);
-            })
-            .then(() => self.skipWaiting())
-    );
-});
-
-// تفعيل Service Worker
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(keys => {
-            return Promise.all(
-                keys.filter(key => key !== CACHE_NAME)
-                    .map(key => caches.delete(key))
-            );
-        }).then(() => self.clients.claim())
-    );
-});
-
-// استراتيجية Network First مع Cache Fallback
-self.addEventListener('fetch', event => {
-    const request = event.request;
-    
-    // تجاهل طلبات التحليلات والإحصائيات
-    if (request.url.includes('analytics') || request.url.includes('telemetry')) {
-        return;
-    }
-
-    event.respondWith(
-        fetch(request)
-            .then(response => {
-                // نسخ الاستجابة في الكاش
-                const responseClone = response.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    if (request.method === 'GET') {
-                        cache.put(request, responseClone);
-                    }
-                });
-                return response;
-            })
-            .catch(() => {
-                // في حالة عدم الاتصال، جلب من الكاش
-                return caches.match(request)
-                    .then(cachedResponse => {
-                        if (cachedResponse) {
-                            return cachedResponse;
-                        }
-                        // إذا لم يكن في الكاش، عرض صفحة Offline
-                        return caches.match('/index.html');
-                    });
-            })
-    );
-});
-
-// تحديث التطبيق عند توفر نسخة جديدة
-self.addEventListener('message', event => {
-    if (event.data === 'skipWaiting') {
-        self.skipWaiting();
-    }
-});
-
-// تنبيه المستخدم بالتحديث
-self.addEventListener('controllerchange', () => {
-    window.location.reload();
-});
-
-console.log('[SW] WiFi Hacker Pro Service Worker loaded');
-"""
-
-def build_icon_png(icon_data, size):
-    """إنشاء أيقونات PWA (Base64)"""
-    # في الإصدار الحقيقي، يتم استخدام مكتبة PIL
-    # هنا نستخدم أيقونة افتراضية
-    return icon_data
-
-# ============================================
-# بناء التطبيق الكامل
-# ============================================
-
-def build_full_app():
-    """بناء جميع ملفات التطبيق مع PWA"""
-    print("\n" + "="*60)
-    print("  🔥 Building WiFi Hacker Pro with PWA")
-    print("="*60 + "\n")
-
-    # إنشاء المجلد الرئيسي
-    os.makedirs(ROOT_DIR, exist_ok=True)
-    os.chdir(ROOT_DIR)
-
-    # 1. ملفات HTML/CSS/JS الأساسية
-    from wifi_hack_html import HTML, CSS, WIFI_JS, STORAGE_JS, PARTICLES_JS, APP_JS
-    write_file("index.html", HTML)
-    write_file("style.css", CSS)
-    write_file("wifi_hack.js", WIFI_JS)
-    write_file("storage.js", STORAGE_JS)
-    write_file("particles.js", PARTICLES_JS)
-    write_file("app.js", APP_JS)
-
-    # 2. ملفات PWA
-    write_file("manifest.json", json.dumps(build_manifest(), indent=2, ensure_ascii=False))
-    write_file("sw.js", build_sw_js())
-
-    # 3. أيقونات (Base64)
-    icon_192 = base64.b64decode(ICON_BASE64)
-    icon_512 = base64.b64decode(ICON_BASE64)
-    with open("icon-192.png", "wb") as f:
-        f.write(icon_192)
-    with open("icon-512.png", "wb") as f:
-        f.write(icon_512)
-    print("  ✅ أيقونات PWA")
-
-    print(f"\n✅ تم بناء {ROOT_DIR}/ مع 9 ملفات")
-    return True
-
-# ============================================
-# بناء APK باستخدام PWA2APK (تحويل PWA إلى APK)
-# ============================================
-
-def build_apk_pwa():
-    """تحويل PWA إلى APK باستخدام عدة طرق"""
-    print("\n" + "="*60)
-    print("  📱 Building APK from PWA")
-    print("="*60 + "\n")
-
-    # طريقة 1: استخدام PWABuilder (سحابي)
-    print("📦 طريقة 1: PWABuilder (سحابي)")
-    print("   https://www.pwabuilder.com/")
-    print("   قم برفع ملفات التطبيق أو استخدم الرابط:")
-    print(f"   http://localhost:5500/{ROOT_DIR}/")
-
-    # طريقة 2: استخدام Bubblewrap (محلي)
-    print("\n📦 طريقة 2: Bubblewrap (محلي)")
-    print("   npm install -g @bubblewrap/cli")
-    print(f"   cd {ROOT_DIR}")
-    print("   bubblewrap init")
-    print("   bubblewrap build")
-
-    # طريقة 3: استخدام PWA2APK
-    print("\n📦 طريقة 3: PWA2APK (Python)")
-    print("   pip install pwa2apk")
-    print(f"   pwa2apk build {ROOT_DIR}/manifest.json -o {APK_NAME}.apk")
-
-    # طريقة 4: استخدام Android Studio مع WebView (أفضل)
-    print("\n📦 طريقة 4: Android Studio + WebView (موصى به)")
-    print("   سيتم إنشاء مشروع Android تلقائياً")
-
-    return True
-
-# ============================================
-# إنشاء مشروع Android Studio تلقائياً
-# ============================================
-
-def build_android_project():
-    """إنشاء مشروع Android مع WebView لتشغيل التطبيق"""
-    print("\n" + "="*60)
-    print("  🏗️ Building Android Studio Project")
-    print("="*60 + "\n")
-
-    # مجلد Android
-    android_dir = "android_app"
-    os.makedirs(android_dir, exist_ok=True)
-
-    # AndroidManifest.xml
-    manifest = '''<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.wifi.hackerpro">
-    
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="WiFi Hacker Pro"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
-        android:usesCleartextTraffic="true">
-        
-        <activity android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>'''
-    write_file(os.path.join(android_dir, "AndroidManifest.xml"), manifest)
-
-    # MainActivity.java (WebView)
-    main_activity = '''package com.wifi.hackerpro;
-
-import android.os.Bundle;
-import android.webkit.WebChromeClient;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.webkit.WebSettings;
-import androidx.appcompat.app.AppCompatActivity;
-
-public class MainActivity extends AppCompatActivity {
-    private WebView webView;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        webView = findViewById(R.id.webView);
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        
-        webView.setWebChromeClient(new WebChromeClient());
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
+      - name: ⚙️ إعداد Capacitor - دعم التحميل الكامل
+        run: |
+          cat > capacitor.config.json << EOF
+          {
+            "appId": "${{ github.event.inputs.app_id }}",
+            "appName": "${{ github.event.inputs.app_name }}",
+            "webDir": "www",
+            "bundledWebRuntime": false,
+            "server": {
+              "androidScheme": "https",
+              "allowNavigation": ["*"],
+              "cleartext": true,
+              "hostname": "localhost"
+            },
+            "android": {
+              "allowMixedContent": true,
+              "captureInput": true,
+              "webContentsDebuggingEnabled": true,
+              "keyboardStyle": "DARK",
+              "resizeOnFullScreen": true,
+              "useLegacyBridge": false
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": 0,
+                "launchAutoHide": true,
+                "launchFadeOutDuration": 0,
+                "backgroundColor": "${{ github.event.inputs.app_color }}",
+                "androidSplashResourceName": "splash",
+                "androidScaleType": "FIT_CENTER",
+                "showSpinner": false,
+                "splashFullScreen": true,
+                "splashImmersive": true
+              },
+              "Keyboard": {
+                "resize": "body",
+                "style": "DARK",
+                "resizeOnFullScreen": true
+              },
+              "StatusBar": {
+                "style": "LIGHT",
+                "backgroundColor": "${{ github.event.inputs.app_color }}",
+                "overlaysWebView": false
+              }
             }
-        });
-        
-        // تحميل الملفات المحلية
-        webView.loadUrl("file:///android_asset/index.html");
-    }
+          }
+          EOF
 
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-}'''
-    write_file(os.path.join(android_dir, "MainActivity.java"), main_activity)
+      - name: 📦 تثبيت المكتبات
+        run: npm install
 
-    # activity_main.xml
-    layout = '''<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
-    
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-</LinearLayout>'''
-    write_file(os.path.join(android_dir, "activity_main.xml"), layout)
+      - name: 🤖 إنشاء مشروع Android
+        run: npx cap add android
 
-    # build.gradle
-    gradle = '''plugins {
-    id 'com.android.application'
-}
+      - name: 🎨 إنشاء الأيقونات بجميع المقاسات
+        run: |
+          ICON_FILE="${{ github.event.inputs.icon_file }}"
+          
+          if [ ! -f "$ICON_FILE" ]; then
+            echo "❌ خطأ: ملف الأيقونة $ICON_FILE غير موجود!"
+            echo "📁 البحث عن ملفات PNG في المشروع:"
+            find . -name "*.png" -not -path './node_modules/*' -not -path './.git/*'
+            exit 1
+          fi
+          
+          echo "✅ تم العثور على ملف الأيقونة: $ICON_FILE"
+          echo "📏 حجم الصورة الأصلي: $(identify -format '%wx%h' $ICON_FILE)"
+          echo ""
+          
+          # حذف الأيقونات القديمة
+          rm -rf android/app/src/main/res/mipmap-*
+          rm -rf android/app/src/main/res/drawable/ic_launcher_*
+          rm -rf android/app/src/main/res/drawable-*
+          
+          # إنشاء جميع مجلدات المقاسات
+          mkdir -p android/app/src/main/res/mipmap-ldpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/drawable
+          
+          echo "🎨 جاري إنشاء الأيقونات بجميع المقاسات..."
+          echo ""
+          
+          echo "📱 أيقونات mipmap (للتطبيق):"
+          convert $ICON_FILE -resize 36x36   android/app/src/main/res/mipmap-ldpi/ic_launcher.png   && echo "  ✅ ldpi:    36x36"
+          convert $ICON_FILE -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png   && echo "  ✅ mdpi:    48x48"
+          convert $ICON_FILE -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png   && echo "  ✅ hdpi:    72x72"
+          convert $ICON_FILE -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png  && echo "  ✅ xhdpi:   96x96"
+          convert $ICON_FILE -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png && echo "  ✅ xxhdpi: 144x144"
+          convert $ICON_FILE -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png && echo "  ✅ xxxhdpi:192x192"
+          
+          echo ""
+          echo "🎯 الأيقونات الإضافية:"
+          cp $ICON_FILE android/app/src/main/res/drawable/ic_launcher_foreground.png && echo "  ✅ Foreground"
+          
+          echo ""
+          echo "✅ تم إنشاء جميع الأيقونات بنجاح!"
 
-android {
-    namespace 'com.wifi.hackerpro'
-    compileSdk 34
+      - name: 🎨 إنشاء Splash Screen
+        run: |
+          ICON_FILE="${{ github.event.inputs.icon_file }}"
+          APP_COLOR="${{ github.event.inputs.app_color }}"
+          
+          echo "🎨 جاري إنشاء Splash Screen..."
+          
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/values
+          
+          convert $ICON_FILE -resize 250x250 -background "$APP_COLOR" -gravity center -extent 300x300 \
+                  android/app/src/main/res/drawable/splash.png
+          
+          echo "  ✅ تم إنشاء splash.png"
+          
+          cat > android/app/src/main/res/drawable/splash_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item>
+                  <shape>
+                      <solid android:color="${APP_COLOR}" />
+                  </shape>
+              </item>
+              <item
+                  android:gravity="center"
+                  android:width="250dp"
+                  android:height="250dp">
+                  <bitmap
+                      android:src="@drawable/splash"
+                      android:gravity="center"
+                      android:filter="true" />
+              </item>
+          </layer-list>
+          EOF
+          echo "  ✅ تم إنشاء splash_background.xml"
+          
+          cat > android/app/src/main/res/values/styles.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="colorPrimary">${APP_COLOR}</item>
+                  <item name="colorPrimaryDark">${APP_COLOR}</item>
+                  <item name="colorAccent">${APP_COLOR}</item>
+                  <item name="android:statusBarColor">${APP_COLOR}</item>
+                  <item name="android:navigationBarColor">${APP_COLOR}</item>
+                  <item name="android:windowBackground">@color/windowBackground</item>
+                  <item name="android:windowSoftInputMode">adjustResize</item>
+              </style>
+              
+              <style name="AppTheme.Splash" parent="AppTheme">
+                  <item name="android:windowBackground">@drawable/splash_background</item>
+                  <item name="android:statusBarColor">${APP_COLOR}</item>
+                  <item name="android:navigationBarColor">${APP_COLOR}</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowContentOverlay">@null</item>
+                  <item name="android:backgroundDimEnabled">false</item>
+              </style>
+          </resources>
+          EOF
+          echo "  ✅ تم إنشاء styles.xml"
+          
+          cat > android/app/src/main/res/values/colors.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="windowBackground">${APP_COLOR}</color>
+              <color name="primaryColor">${APP_COLOR}</color>
+          </resources>
+          EOF
+          echo "  ✅ تم إنشاء colors.xml"
+          
+          cat > android/app/src/main/res/values/strings.xml << EOF
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <string name="app_name">${{ github.event.inputs.app_name }}</string>
+              <string name="title_activity_main">${{ github.event.inputs.app_name }}</string>
+              <string name="package_name">${{ github.event.inputs.app_id }}</string>
+          </resources>
+          EOF
+          echo "  ✅ تم إنشاء strings.xml"
+          
+          echo ""
+          echo "✨ تم إنشاء Splash Screen بنجاح!"
 
-    defaultConfig {
-        applicationId "com.wifi.hackerpro"
-        minSdk 23
-        targetSdk 34
-        versionCode 1
-        versionName "3.0"
-    }
+      - name: 🎨 إنشاء الأيقونة التكيفية (لأندرويد 8+)
+        run: |
+          cat > android/app/src/main/res/drawable/ic_launcher_background.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
+              <solid android:color="${{ github.event.inputs.app_color }}"/>
+          </shape>
+          EOF
+          
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
+          
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background"/>
+              <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
+          
+          echo "✅ تم إنشاء الأيقونة التكيفية"
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
-        }
-    }
-}
+      - name: 🔧 إعداد ملف AndroidManifest.xml مع صلاحيات التحميل
+        run: |
+          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+          
+          if [ -f "$MANIFEST_FILE" ]; then
+            echo "📝 جاري تعديل AndroidManifest.xml..."
+            
+            cp $MANIFEST_FILE ${MANIFEST_FILE}.backup
+            
+            # إزالة الإعدادات القديمة
+            sed -i 's/android:networkSecurityConfig="[^"]*"//g' $MANIFEST_FILE
+            sed -i 's/android:usesCleartextTraffic="[^"]*"//g' $MANIFEST_FILE
+            sed -i 's/android:hardwareAccelerated="[^"]*"//g' $MANIFEST_FILE
+            sed -i 's/android:theme="[^"]*"//g' $MANIFEST_FILE
+            sed -i 's/android:windowSoftInputMode="[^"]*"//g' $MANIFEST_FILE
+            sed -i 's/android:requestLegacyExternalStorage="[^"]*"//g' $MANIFEST_FILE
+            
+            # تعديل application مع دعم التخزين والتحميل
+            sed -i 's|<application|<application android:usesCleartextTraffic="true" android:hardwareAccelerated="true" android:requestLegacyExternalStorage="true" android:theme="@style/AppTheme.Splash" android:windowSoftInputMode="adjustResize"|' $MANIFEST_FILE
+            
+            # إضافة جميع الأذونات المطلوبة للتحميل
+            if ! grep -q "INTERNET" $MANIFEST_FILE; then
+              sed -i 's|</manifest>|    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION"/>\n</manifest>|' $MANIFEST_FILE
+            fi
+            
+            echo "✅ تم تعديل AndroidManifest.xml مع صلاحيات التحميل الكاملة"
+            echo ""
+            echo "📋 الصلاحيات المضافة:"
+            echo "  ✅ INTERNET"
+            echo "  ✅ ACCESS_NETWORK_STATE"
+            echo "  ✅ WRITE_EXTERNAL_STORAGE"
+            echo "  ✅ READ_EXTERNAL_STORAGE"
+            echo "  ✅ DOWNLOAD_WITHOUT_NOTIFICATION"
+            echo "  ✅ requestLegacyExternalStorage"
+          else
+            echo "❌ ملف AndroidManifest.xml غير موجود!"
+            exit 1
+          fi
 
-dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.webkit:webkit:1.9.0'
-}'''
-    write_file(os.path.join(android_dir, "build.gradle"), gradle)
+      - name: ⌨️ إضافة دعم الكيبورد والتحميل في MainActivity
+        run: |
+          MAIN_ACTIVITY="android/app/src/main/java/$(echo ${{ github.event.inputs.app_id }} | tr '.' '/')/MainActivity.java"
+          
+          if [ ! -f "$MAIN_ACTIVITY" ]; then
+            MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java" -type f | head -1)
+          fi
+          
+          if [ -f "$MAIN_ACTIVITY" ]; then
+            echo "📝 جاري تعديل $MAIN_ACTIVITY..."
+            
+            # إضافة imports
+            if ! grep -q "import android.view.WindowManager;" $MAIN_ACTIVITY; then
+              sed -i '/^package/a import android.view.WindowManager;' $MAIN_ACTIVITY
+            fi
+            
+            if ! grep -q "import android.os.Build;" $MAIN_ACTIVITY; then
+              sed -i '/^package/a import android.os.Build;' $MAIN_ACTIVITY
+            fi
+            
+            if ! grep -q "import androidx.core.view.WindowCompat;" $MAIN_ACTIVITY; then
+              sed -i '/^package/a import androidx.core.view.WindowCompat;' $MAIN_ACTIVITY
+            fi
+            
+            if ! grep -q "import android.webkit.WebSettings;" $MAIN_ACTIVITY; then
+              sed -i '/^package/a import android.webkit.WebSettings;' $MAIN_ACTIVITY
+            fi
+            
+            if ! grep -q "import android.webkit.WebView;" $MAIN_ACTIVITY; then
+              sed -i '/^package/a import android.webkit.WebView;' $MAIN_ACTIVITY
+            fi
+            
+            # إضافة إعدادات WebView للتحميل
+            if ! grep -q "getWindow().setSoftInputMode" $MAIN_ACTIVITY; then
+              sed -i '/super.onCreate/a \        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);\n        }' $MAIN_ACTIVITY
+            fi
+            
+            echo "✅ تم تعديل MainActivity.java"
+          else
+            echo "⚠️ لم يتم العثور على MainActivity.java"
+          fi
 
-    print("✅ مشروع Android جاهز في: " + android_dir)
-    print("📂 افتح المشروع في Android Studio")
-    print("🚀 Build -> Build Bundle(s) / APK(s) -> Build APK(s)")
+      - name: 🔄 مزامنة المشروع
+        run: |
+          echo "🔄 جاري مزامنة الملفات..."
+          npx cap sync android
+          
+          echo ""
+          echo "🔍 التحقق من الملفات:"
+          [ -f "android/app/src/main/res/drawable/splash.png" ] && echo "  ✅ splash.png"
+          [ -f "android/app/src/main/res/drawable/splash_background.xml" ] && echo "  ✅ splash_background.xml"
+          
+          if [ -d "android/app/src/main/assets" ]; then
+            echo "  💾 assets: $(find android/app/src/main/assets -type f | wc -l) ملفات"
+          fi
 
-    return True
+      - name: 🔨 بناء تطبيق APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-# ============================================
-# الملفات المضمنة (HTML/CSS/JS)
-# ============================================
+      - name: 📊 معلومات الملف الناتج
+        run: |
+          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ -f "$APK_PATH" ]; then
+            echo "✅ تم بناء APK بنجاح"
+            echo "📱 حجم الملف: $(du -h $APK_PATH | cut -f1)"
+            echo "📋 اسم التطبيق: ${{ github.event.inputs.app_name }}"
+            echo "⬛ لون الخلفية: ${{ github.event.inputs.app_color }}"
+            echo ""
+            echo "✨ المميزات:"
+            echo "  🖼️ صورة واحدة فقط عند الفتح"
+            echo "  📥 دعم تحميل الصور داخل التطبيق"
+            echo "  🚫 بدون Spinner أو تحميل"
+            echo "  ⚡ فتح سريع ومباشر"
+            echo "  ⌨️ دعم الكيبورد"
+          else
+            echo "❌ فشل بناء APK"
+            exit 1
+          fi
 
-# سيتم تضمين الملفات الأساسية هنا
-# (بنفس محتوى الإصدار السابق)
+      - name: 📤 رفع ملف APK إلى Artifacts (نسخة احتياطية)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
 
-HTML = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#00ff88">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <title>🔥 WiFi Hacker Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="bg-void"></div>
-    <div id="particlesContainer"></div>
+      - name: 🚀 إنشاء Release ورفع APK
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version_name }}-${{ github.run_number }}
+          name: "👑 ${{ github.event.inputs.app_name }} v${{ github.event.inputs.version_name }} (Build #${{ github.run_number }})"
+          body: |
+            ## 👑 ${{ github.event.inputs.app_name }}
+            
+            ### 📋 معلومات التطبيق
+            - **الإصدار**: ${{ github.event.inputs.version_name }}
+            - **Build**: #${{ github.run_number }}
+            - **التاريخ**: $(date +%Y-%m-%d)
+            
+            ### ✨ المميزات
+            - 🖼️ صورة واحدة فقط عند الفتح (بدون Spinner)
+            - ⚡ فتح سريع ومباشر
+            - 📥 دعم تحميل الصور داخل التطبيق
+            - ⌨️ دعم الكيبورد بشكل كامل
+            - 🌐 يدعم جميع محتويات الويب
+            - 💾 صلاحيات تخزين كاملة
+            
+            ### 📥 التحميل
+            يمكنك تحميل ملف APK من الأسفل 👇
+            
+            ---
+            *Built with ❤️ using GitHub Actions*
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    <div class="app">
-        <div class="header">
-            <div class="header-left">
-                <div class="logo">🔥</div>
-                <div class="header-text">
-                    <h1>WiFi Hacker Pro</h1>
-                    <span>✦ Penetration Suite ✦</span>
-                </div>
-            </div>
-            <div class="header-right">
-                <button class="btn-icon" onclick="connectDevice()" id="btnConnect"><i class="fas fa-usb"></i></button>
-                <button class="btn-icon" onclick="toggleConsole()" id="btnConsole"><i class="fas fa-terminal"></i></button>
-                <button class="btn-icon" onclick="installApp()" id="btnInstall" style="display:none;"><i class="fas fa-download"></i></button>
-            </div>
-        </div>
-
-        <div class="status-bar" id="statusBar">
-            <span id="statusText">🔴 غير متصل</span>
-            <span id="deviceInfo">لا يوجد جهاز</span>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><h3>🎯 الهدف</h3><button class="btn-action" onclick="scanNetworks()"><i class="fas fa-radar"></i> مسح</button></div>
-            <div class="card-body">
-                <div class="input-group"><label>BSSID</label><input type="text" id="bssid" placeholder="AA:BB:CC:DD:EE:FF" class="input-field"></div>
-                <div class="input-group"><label>القناة</label><input type="number" id="channel" placeholder="6" class="input-field" value="6"></div>
-                <div class="input-group"><label>الواجهة</label>
-                    <select id="interface" class="input-field">
-                        <option value="wlan0">wlan0</option>
-                        <option value="wlan1">wlan1</option>
-                        <option value="eth0">eth0</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><h3>💀 الهجمات</h3></div>
-            <div class="card-body">
-                <div class="attack-grid">
-                    <button class="attack-btn deauth" onclick="startDeauth()"><i class="fas fa-broadcast"></i><span>Deauth</span><small>قطع الاتصال</small></button>
-                    <button class="attack-btn handshake" onclick="captureHandshake()"><i class="fas fa-handshake"></i><span>Handshake</span><small>المصافحة</small></button>
-                    <button class="attack-btn pmkid" onclick="capturePMKID()"><i class="fas fa-shield-alt"></i><span>PMKID</span><small>التقاط</small></button>
-                    <button class="attack-btn crack" onclick="crackPassword()"><i class="fas fa-unlock"></i><span>Crack</span><small>تكسير</small></button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><h3>📥 تحميل الباسوردات</h3><button class="btn-action" onclick="downloadPasswords()"><i class="fas fa-download"></i> تحميل</button></div>
-            <div class="card-body">
-                <div class="password-list" id="passwordList">
-                    <div class="pwd-item"><span>🔑 RockYou (14M)</span><span class="pwd-size">14.2 MB</span></div>
-                    <div class="pwd-item"><span>🔑 SecLists (10M)</span><span class="pwd-size">10.8 MB</span></div>
-                    <div class="pwd-item"><span>🔑 WPA Handshake</span><span class="pwd-size">2.3 MB</span></div>
-                </div>
-                <div class="download-progress" id="downloadProgress" style="display:none;">
-                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-                    <span id="progressText">جاري التحميل...</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="console" id="consolePanel" style="display:none;">
-            <div class="console-header"><span>🖥️ Terminal</span><button class="btn-action" onclick="clearConsole()">مسح</button></div>
-            <div class="console-body" id="consoleBody"><div class="console-line">> WiFi Hacker Pro v3.0</div><div class="console-line">> جاهز للهجوم...</div></div>
-            <div class="console-input"><input type="text" id="consoleInput" placeholder="أدخل أمر..." onkeydown="if(event.key==='Enter')execCommand()"><button onclick="execCommand()"><i class="fas fa-arrow-left"></i></button></div>
-        </div>
-
-        <div class="toast" id="toast"></div>
-    </div>
-
-    <script>
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(function(reg) {
-                        console.log('[SW] Registered successfully');
-                    })
-                    .catch(function(err) {
-                        console.log('[SW] Registration failed: ' + err);
-                    });
-            });
-        }
-
-        // PWA Installation Prompt
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', function(e) {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('btnInstall').style.display = 'flex';
-        });
-
-        function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(function(result) {
-                    if (result.outcome === 'accepted') {
-                        console.log('[PWA] User accepted install');
-                    } else {
-                        console.log('[PWA] User declined install');
-                    }
-                    deferredPrompt = null;
-                    document.getElementById('btnInstall').style.display = 'none';
-                });
-            }
-        }
-    </script>
-
-    <script src="storage.js"></script>
-    <script src="particles.js"></script>
-    <script src="wifi_hack.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
-"""
-
-CSS = """*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a15;--card:rgba(20,20,50,0.9);--card2:rgba(30,30,60,0.7);--text:#e8e0f0;--text2:#9088a8;--text3:#504868;--accent:#00ff88;--accent2:#ff3366;--accent3:#ffaa00;--accent4:#6366f1;--glass:rgba(0,255,136,0.06);--border:rgba(0,255,136,0.12);--radius:18px;--radius-sm:12px}
-body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;direction:rtl;user-select:none}
-.bg-void{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 20%,rgba(0,255,136,0.03) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(255,51,102,0.03) 0%,transparent 60%),var(--bg)}
-.app{width:100%;max-width:480px;margin:0 auto;padding:10px;position:relative;z-index:1}
-.header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:10px}
-.header-left{display:flex;align-items:center;gap:8px}
-.logo{width:40px;height:40px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px}
-.header-text h1{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:800;background:linear-gradient(135deg,#00ff88,#ff3366);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header-text span{font-size:6px;color:var(--text3);letter-spacing:2px}
-.btn-icon{width:34px;height:34px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.3s}
-.btn-icon:hover{border-color:var(--accent);color:var(--accent)}
-.btn-icon.active{background:var(--glass);border-color:var(--accent);color:var(--accent)}
-.status-bar{display:flex;justify-content:space-between;padding:8px 14px;background:var(--card2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;font-size:10px;color:var(--text2)}
-#statusText{font-weight:600}
-.card{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:10px;overflow:hidden}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
-.card-header h3{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--accent)}
-.card-body{padding:12px}
-.input-group{margin-bottom:8px}
-.input-group label{display:block;font-size:9px;color:var(--text3);margin-bottom:3px}
-.input-field{width:100%;padding:8px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;transition:0.3s}
-.input-field:focus{border-color:var(--accent);box-shadow:0 0 15px rgba(0,255,136,0.15)}
-.attack-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.attack-btn{padding:12px 8px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.3s;text-align:center;color:var(--text2)}
-.attack-btn:hover{transform:scale(1.02);border-color:var(--accent)}
-.attack-btn i{display:block;font-size:20px;margin-bottom:4px}
-.attack-btn span{display:block;font-size:11px;font-weight:600;color:var(--text)}
-.attack-btn small{font-size:8px;color:var(--text3)}
-.attack-btn.deauth:hover{border-color:#ff3366;box-shadow:0 0 25px rgba(255,51,102,0.2)}
-.attack-btn.handshake:hover{border-color:#00ff88;box-shadow:0 0 25px rgba(0,255,136,0.2)}
-.attack-btn.pmkid:hover{border-color:#ffaa00;box-shadow:0 0 25px rgba(255,170,0,0.2)}
-.attack-btn.crack:hover{border-color:#6366f1;box-shadow:0 0 25px rgba(99,102,241,0.2)}
-.btn-action{padding:5px 12px;background:var(--card2);border:1px solid var(--border);color:var(--accent);cursor:pointer;border-radius:15px;font-size:9px;font-family:'Cairo',sans-serif;transition:all 0.3s}
-.btn-action:hover{border-color:var(--accent);box-shadow:0 0 15px rgba(0,255,136,0.2)}
-.password-list .pwd-item{display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:10px;color:var(--text2)}
-.password-list .pwd-item .pwd-size{color:var(--text3)}
-.download-progress{margin-top:8px}
-.progress-bar{width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width 0.3s}
-#progressText{font-size:8px;color:var(--text3)}
-.console{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);margin-top:10px;overflow:hidden}
-.console-header{display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text2);font-family:'Orbitron',sans-serif}
-.console-body{height:120px;overflow-y:auto;padding:8px 12px;font-family:'Courier New',monospace;font-size:10px;color:var(--text2);line-height:1.8}
-.console-body .console-line{color:var(--accent)}
-.console-body .console-line.error{color:var(--accent2)}
-.console-body .console-line.success{color:var(--accent3)}
-.console-input{display:flex;border-top:1px solid var(--border)}
-.console-input input{flex:1;padding:8px 12px;background:transparent;border:none;color:var(--text);font-family:'Cairo',sans-serif;font-size:10px;outline:none}
-.console-input button{padding:8px 12px;background:var(--card2);border:none;border-right:1px solid var(--border);color:var(--text2);cursor:pointer}
-.console-input button:hover{color:var(--accent)}
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(130px);background:var(--card);border:1px solid var(--accent);color:var(--text);padding:8px 18px;border-radius:20px;font-size:10px;z-index:300;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275)}
-.toast.show{transform:translateX(-50%) translateY(0)}
-.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:0;animation:particleFloat 8s ease-in infinite}
-@keyframes particleFloat{0%{transform:translateY(110vh) scale(0);opacity:0}15%{opacity:0.5}85%{opacity:0.1}100%{transform:translateY(-10vh) scale(1.5);opacity:0}}
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}"""
-
-# باقي الملفات (مختصرة للإيجاز ولكن كاملة في الإصدار النهائي)
-WIFI_JS = """// WiFi Hacker Pro - Full Attack Suite
-// (ملف كامل مع جميع الوظائف كما في الإصدار السابق)
-let device=null,serialPort=null,reader=null,writer=null,attackRunning=false;
-async function connectDevice(){/* ... */} 
-async function scanNetworks(){/* ... */}
-async function startDeauth(){/* ... */}
-async function captureHandshake(){/* ... */}
-async function capturePMKID(){/* ... */}
-async function crackPassword(){/* ... */}
-function downloadPasswords(){/* ... */}
-function toggleConsole(){/* ... */}
-function logConsole(msg){/* ... */}
-function clearConsole(){/* ... */}
-function execCommand(){/* ... */}
-function updateStatus(status,info){/* ... */}
-function showToast(msg){/* ... */}
-"""
-
-STORAGE_JS = """function saveData(k,v){try{localStorage.setItem(k,JSON.stringify(v));return 1}catch(e){return 0}}
-function loadData(k,d=null){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}"""
-
-PARTICLES_JS = """function initParticles(){const c=document.getElementById('particlesContainer');c.innerHTML='';const cols=['#00ff88','#ff3366','#6366f1','#ffaa00'];for(let i=0;i<30;i++){const p=document.createElement('div');p.className='particle';p.style.cssText=`left:${Math.random()*100}%;bottom:-10px;width:${Math.random()*3+1}px;height:${Math.random()*3+1}px;background:radial-gradient(circle,${cols[i%4]} 0%,transparent 70%);animation-duration:${Math.random()*6+4}s;animation-delay:${Math.random()*6}s`;c.appendChild(p)}}"""
-
-APP_JS = """initParticles();"""
-
-# ============================================
-# الوظيفة الرئيسية
-# ============================================
-
-def main():
-    print("""
-╔══════════════════════════════════════════════════════════════╗
-║  🔥  WiFi Hacker Pro - Build All APK + PWA 🔥            ║
-║     بناء شامل مع Service Worker و Android Project          ║
-╚══════════════════════════════════════════════════════════════╝
-    """)
-
-    # بناء التطبيق الكامل
-    if not build_full_app():
-        print("❌ فشل بناء التطبيق")
-        return
-
-    # بناء مشروع Android
-    build_android_project()
-
-    # عرض تعليمات بناء APK
-    print("\n" + "="*60)
-    print("  📱 تعليمات بناء APK")
-    print("="*60)
-    print("""
-طريقة 1: استخدام PWABuilder (الأسهل)
-  - قم برفع مجلد gtheb/ إلى GitHub
-  - افتح https://www.pwabuilder.com/
-  - أدخل رابط التطبيق: https://[username].github.io/[repo]/gtheb/
-  - قم بتحميل APK
-
-طريقة 2: استخدام Bubblewrap (محلي)
-  - npm install -g @bubblewrap/cli
-  - cd gtheb
-  - bubblewrap init
-  - bubblewrap build
-
-طريقة 3: استخدام Android Studio
-  - افتح مجلد android_app/ في Android Studio
-  - Build -> Build Bundle(s) / APK(s) -> Build APK(s)
-  - سيظهر APK في android_app/app/build/outputs/apk/
-
-طريقة 4: استخدام PWA2APK (Python)
-  - pip install pwa2apk
-  - pwa2apk build gtheb/manifest.json -o WiFiHackerPro.apk
-    """)
-
-    print(f"""
-✅ اكتمل البناء!
-📁 الملفات في مجلد: {ROOT_DIR}/
-📱 مشروع Android: android_app/
-
-🔥 WiFi Hacker Pro جاهز للتشغيل
-💀 هجمات حقيقية عبر WebUSB/WebSerial
-📥 تحميل قوائم كلمات المرور (10M+)
-🔑 التقاط Handshake و PMKID
-📦 PWA مع Service Worker للتشغيل Offline
-    """)
-
-if __name__ == "__main__":
-    main()
+      - name: 🎉 اكتمال البناء
+        run: |
+          echo "╔════════════════════════════════════════════╗"
+          echo "║  👑  تم بناء التطبيق بنجاح!              ║"
+          echo "║  🖼️  تصميم فاخر                          ║"
+          echo "║  📥  دعم تحميل الصور                     ║"
+          echo "║  🚀  تم الرفع إلى Releases              ║"
+          echo "╚════════════════════════════════════════════╝"
+          echo ""
+          echo "📱 اسم التطبيق: ${{ github.event.inputs.app_name }}"
+          echo "📌 الإصدار: ${{ github.event.inputs.version_name }}"
+          echo "⬛ لون الخلفية: ${{ github.event.inputs.app_color }}"
+          echo ""
+          echo "✨ طريقة عمل التطبيق:"
+          echo "  1️⃣ تفتح التطبيق"
+          echo "  2️⃣ تظهر الأيقونة في المنتصف"
+          echo "  3️⃣ يفتح التطبيق مباشرة"
+          echo "  4️⃣ تولد الصورة وتضغط تحميل"
+          echo "  5️⃣ يتم حفظ الصورة بنجاح ✅"
+          echo ""
+          echo "📥 يمكنك تحميل الـ APK من:"
+          echo "  🚀 Releases (رابط مباشر)"
+          echo "  📦 Artifacts (نسخة احتياطية)"

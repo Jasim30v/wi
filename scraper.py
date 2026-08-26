@@ -2,547 +2,1009 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║  📡  WiFi NETSCAN PRO - ULTIMATE NETWORK SCANNER  📡     ║
-║     Real WiFi Access + Professional UI                     ║
+║  📡  WiFi NETSCAN PRO - Network Scraper & Analyzer  📡    ║
+║     Professional Network Scanner - Python Edition          ║
 ║                                                            ║
-║  🌐  Real Network Detection + Signal Analysis              ║
-║  🎨  Premium Glass Morphism Design                         ║
-║  📊  Real-time Signal Monitoring                           ║
-║  🔐  Security Analysis + Network Details                   ║
+║  🌐  Real Network Discovery & Analysis                     ║
+║  📊  Signal Strength Monitoring                           ║
+║  🔍  Network Details Extraction                          ║
+║  💾  Export to Multiple Formats                          ║
 ║                                                          ║
-╚══════════════════════════════════════════════════════════════╝
+╚══════════════════════════════════════════════════════════╝
 """
 
 import os
+import sys
 import json
-import subprocess
+import time
+import csv
 import platform
-import re
+import subprocess
+import threading
+import socket
+import struct
 from datetime import datetime
+from collections import defaultdict
+from typing import Dict, List, Optional, Tuple, Any
+import argparse
+from pathlib import Path
 
-TOTAL_LINES = 0
+# Try to import optional dependencies
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
 
-def write(filename, content):
-    global TOTAL_LINES
-    os.makedirs(os.path.dirname(filename) if os.path.dirname(filename) else '.', exist_ok=True)
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(content)
-    lines = content.count('\n') + 1
-    TOTAL_LINES += lines
-    print(f"  ✅ {filename} ({lines} سطر)")
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    from rich.panel import Panel
+    from rich.layout import Layout
+    from rich.live import Live
+    from rich.text import Text
+    from rich import box
+    RICH_AVAILABLE = True
+except ImportError:
+    RICH_AVAILABLE = False
+    print("⚠️  تثبيت rich للحصول على واجهة أفضل: pip install rich")
 
-def section(title):
-    print(f"\n{'='*60}")
-    print(f"  📡 {title}")
-    print(f"{'='*60}")
+# Try to import WiFi scanning libraries
+try:
+    import pywifi
+    from pywifi import const
+    PYWIFI_AVAILABLE = True
+except ImportError:
+    PYWIFI_AVAILABLE = False
 
-# ═══════════════════════════════════════════════════════════
-# 📡 1. index.html - واجهة احترافية
-# ═══════════════════════════════════════════════════════════
+try:
+    import nmap
+    NMAP_AVAILABLE = True
+except ImportError:
+    NMAP_AVAILABLE = False
 
-def build_index():
-    return """<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>📡 WiFi NetScan Pro - الماسح الاحترافي</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="bg-void"></div>
-    <div class="bg-grid"></div>
-    <div class="bg-ring bg-ring-1"></div>
-    <div class="bg-ring bg-ring-2"></div>
-    <div class="bg-ring bg-ring-3"></div>
-    <div id="particlesContainer"></div>
-
-    <div class="app">
-        <!-- Header -->
-        <div class="header">
-            <div class="header-left">
-                <div class="logo">
-                    <i class="fas fa-wifi"></i>
-                </div>
-                <div class="header-text">
-                    <h1>WiFi NetScan Pro</h1>
-                    <span>✦ ULTIMATE SCANNER ✦</span>
-                </div>
-            </div>
-            <div class="header-right">
-                <button class="btn-icon" onclick="toggleFilters()" id="btnFilters" title="الفلاتر">
-                    <i class="fas fa-filter"></i>
-                </button>
-                <button class="btn-icon" onclick="toggleHistory()" id="btnHistory" title="السجل">
-                    <i class="fas fa-history"></i>
-                </button>
-                <button class="btn-icon" onclick="toggleSettings()" id="btnSettings" title="الإعدادات">
-                    <i class="fas fa-cog"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Stats Bar -->
-        <div class="stats-bar">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-wifi"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value" id="totalNetworks">0</div>
-                    <div class="stat-label">الشبكات</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value" id="secureNetworks">0</div>
-                    <div class="stat-label">آمنة</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-unlock"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value" id="openNetworks">0</div>
-                    <div class="stat-label">مفتوحة</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-signal"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value" id="avgSignal">0%</div>
-                    <div class="stat-label">المتوسط</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Visualizer -->
-        <div class="visualizer-3d" id="visualizer3D">
-            <canvas id="vizCanvas"></canvas>
-            <div class="viz-overlay">
-                <div class="viz-header">
-                    <div class="viz-title">
-                        <div class="network-count" id="networkCount">0 شبكة</div>
-                        <div class="scan-status" id="scanStatus">جاهز للمسح</div>
-                    </div>
-                    <div class="viz-time">
-                        <span id="lastScan">آخر مسح: -</span>
-                        <span id="scanDuration">0:00</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="progress-section">
-            <div class="progress-track" id="progressTrack">
-                <div class="progress-fill" id="progressFill"></div>
-                <div class="progress-thumb" id="progressThumb"></div>
-            </div>
-            <div class="progress-labels">
-                <span>المسح</span>
-                <span id="progressPercent">0%</span>
-            </div>
-        </div>
-
-        <!-- Controls -->
-        <div class="controls">
-            <button class="ctrl-btn" onclick="toggleAutoScan()" id="autoScanBtn" title="مسح تلقائي">
-                <i class="fas fa-sync"></i>
-            </button>
-            <button class="ctrl-btn" onclick="exportData()" title="تصدير">
-                <i class="fas fa-download"></i>
-            </button>
-            <button class="ctrl-play" id="scanBtn" onclick="startScan()" title="بدء المسح">
-                <i class="fas fa-search" id="scanIcon"></i>
-            </button>
-            <button class="ctrl-btn" onclick="sortNetworks()" title="ترتيب">
-                <i class="fas fa-sort-amount-down"></i>
-            </button>
-            <button class="ctrl-btn" onclick="clearNetworks()" title="مسح">
-                <i class="fas fa-trash"></i>
-            </button>
-        </div>
-
-        <!-- Filters Panel -->
-        <div class="filter-panel" id="filterPanel" style="display:none">
-            <div class="panel-header">
-                <h3><i class="fas fa-filter"></i> الفلاتر</h3>
-                <button class="btn-close" onclick="toggleFilters()">✕</button>
-            </div>
-            <div class="filter-presets">
-                <button class="preset-btn active" onclick="setFilter('all', this)">الكل</button>
-                <button class="preset-btn" onclick="setFilter('secure', this)">آمنة</button>
-                <button class="preset-btn" onclick="setFilter('open', this)">مفتوحة</button>
-                <button class="preset-btn" onclick="setFilter('5ghz', this)">5 GHz</button>
-                <button class="preset-btn" onclick="setFilter('2ghz', this)">2.4 GHz</button>
-            </div>
-            <div class="filter-options">
-                <div class="filter-knob">
-                    <span>📶 الحد الأدنى للإشارة</span>
-                    <input type="range" class="gold-slider" id="minSignal" min="0" max="100" value="0" oninput="updateFilters()">
-                    <span id="minSignalValue">0%</span>
-                </div>
-                <div class="filter-knob">
-                    <span>👁 إظهار المخفية</span>
-                    <label class="switch">
-                        <input type="checkbox" id="showHidden" onchange="updateFilters()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- History Panel -->
-        <div class="history-panel" id="historyPanel" style="display:none">
-            <div class="panel-header">
-                <h3><i class="fas fa-history"></i> سجل المسح</h3>
-                <button class="btn-close" onclick="toggleHistory()">✕</button>
-            </div>
-            <div class="history-content" id="historyContent">
-                <p class="history-line">📡 لا يوجد سجل بعد</p>
-            </div>
-        </div>
-
-        <!-- Settings Panel -->
-        <div class="settings-panel" id="settingsPanel" style="display:none">
-            <div class="panel-header">
-                <h3><i class="fas fa-cog"></i> الإعدادات</h3>
-                <button class="btn-close" onclick="toggleSettings()">✕</button>
-            </div>
-            <div class="settings-content">
-                <div class="setting-item">
-                    <span>🔄 المسح التلقائي</span>
-                    <label class="switch">
-                        <input type="checkbox" id="autoScanSetting" onchange="updateSettings()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <span>⏱ مدة المسح (ثانية)</span>
-                    <input type="number" class="setting-input" id="scanInterval" value="10" min="5" max="60">
-                </div>
-                <div class="setting-item">
-                    <span>🔊 صوت التنبيه</span>
-                    <label class="switch">
-                        <input type="checkbox" id="soundEnabled" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Network List -->
-        <div class="playlist-section">
-            <div class="playlist-header">
-                <h3><i class="fas fa-network-wired"></i> الشبكات المكتشفة</h3>
-                <span class="network-stats" id="networkStats">0 شبكة</span>
-            </div>
-            <div class="playlist" id="networkList">
-                <div class="empty-playlist">
-                    <span>📡</span>
-                    <p>اضغط زر المسح لبدء اكتشاف الشبكات</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Network Details Modal -->
-    <div class="modal" id="networkModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">تفاصيل الشبكة</h3>
-                <button class="btn-close" onclick="closeModal()">✕</button>
-            </div>
-            <div class="modal-body" id="modalBody">
-            </div>
-        </div>
-    </div>
-
-    <div class="toast" id="toast"></div>
-
-    <script src="storage.js"></script>
-    <script src="particles.js"></script>
-    <script src="visualizer.js"></script>
-    <script src="scanner.js"></script>
-    <script src="filters.js"></script>
-    <script src="history.js"></script>
-    <script src="settings.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>"""
+try:
+    import netifaces
+    NETIFACES_AVAILABLE = True
+except ImportError:
+    NETIFACES_AVAILABLE = False
 
 # ═══════════════════════════════════════════════════════════
-# 📡 2. style.css - تصميم احترافي
+# 📡 CONFIGURATION & CONSTANTS
 # ═══════════════════════════════════════════════════════════
 
-def build_style():
-    return """*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a1a;--card:rgba(15,15,35,0.9);--card2:rgba(20,20,45,0.8);--text:#f0e8ff;--text2:#a098b8;--text3:#605878;--accent:#00ffcc;--accent2:#ff44aa;--accent3:#ffaa00;--accent4:#6366f1;--glass:rgba(0,255,204,0.08);--border:rgba(0,255,204,0.15);--radius:24px;--radius-sm:16px;--radius-xs:12px;--shadow:0 8px 32px rgba(0,0,0,0.3);--shadow-glow:0 0 30px rgba(0,255,204,0.2)}
-body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;direction:rtl;user-select:none}
-
-.bg-void{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 20%,rgba(0,255,204,0.05) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(255,68,170,0.04) 0%,transparent 60%),var(--bg)}
-.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,255,204,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,204,0.02) 1px,transparent 1px);background-size:50px 50px;pointer-events:none}
-.bg-ring{position:fixed;border-radius:50%;border:1px solid rgba(0,255,204,0.08);z-index:0;pointer-events:none;animation:ringRotate 30s linear infinite}
-.bg-ring-1{width:600px;height:600px;top:-200px;left:-100px;animation-duration:25s}
-.bg-ring-2{width:500px;height:500px;bottom:-150px;right:-80px;animation-duration:35s;animation-direction:reverse}
-.bg-ring-3{width:400px;height:400px;top:30%;left:40%;animation-duration:40s}
-@keyframes ringRotate{to{transform:rotate(360deg)}}
-
-.app{width:100%;max-width:520px;margin:0 auto;padding:12px;position:relative;z-index:1}
-
-/* Header */
-.header{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:12px;box-shadow:var(--shadow)}
-.header-left{display:flex;align-items:center;gap:12px}
-.logo{width:48px;height:48px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent);animation:logoGlow 3s ease-in-out infinite}
-@keyframes logoGlow{0%,100%{box-shadow:0 0 20px rgba(0,255,204,0.3)}50%{box-shadow:0 0 35px rgba(255,68,170,0.6)}}
-.header-text h1{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(135deg,#00ffcc,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header-text span{font-size:8px;color:var(--text3);letter-spacing:3px}
-.header-right{display:flex;gap:8px}
-.btn-icon{width:40px;height:40px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text2);transition:all 0.3s}
-.btn-icon:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
-.btn-icon.active{background:var(--glass);border-color:var(--accent);color:var(--accent);box-shadow:var(--shadow-glow)}
-
-/* Stats Bar */
-.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-.stat-card{background:var(--card);backdrop-filter:blur(40px);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;transition:all 0.3s}
-.stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-glow)}
-.stat-icon{font-size:20px;margin-bottom:6px}
-.stat-icon .fa-wifi{color:var(--accent)}
-.stat-icon .fa-shield-alt{color:#00ff88}
-.stat-icon .fa-unlock{color:var(--accent2)}
-.stat-icon .fa-signal{color:var(--accent3)}
-.stat-value{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
-.stat-label{font-size:9px;color:var(--text3)}
-
-/* Visualizer */
-.visualizer-3d{position:relative;width:100%;aspect-ratio:1;max-height:350px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:10px;box-shadow:var(--shadow)}
-.visualizer-3d canvas{width:100%;height:100%}
-.viz-overlay{position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(to top,rgba(10,10,26,0.95),transparent)}
-.viz-header{display:flex;justify-content:space-between;align-items:flex-end}
-.network-count{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:var(--accent);text-shadow:0 0 20px rgba(0,255,204,0.5)}
-.scan-status{font-size:11px;color:var(--text2)}
-.viz-time{text-align:left;font-family:'Orbitron',sans-serif;font-size:9px;color:var(--accent2)}
-
-/* Progress */
-.progress-section{padding:4px 0;margin-bottom:10px}
-.progress-track{width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;cursor:pointer;position:relative}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));border-radius:3px;width:0;transition:width 0.3s ease}
-.progress-thumb{position:absolute;top:-5px;width:16px;height:16px;background:#fff;border-radius:50%;box-shadow:0 0 15px rgba(0,255,204,0.6);transform:translateX(-50%);left:0;display:none}
-.progress-track:hover .progress-thumb{display:block}
-.progress-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:4px}
-
-/* Controls */
-.controls{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px}
-.ctrl-btn{width:44px;height:44px;background:var(--card2);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text2);transition:all 0.3s}
-.ctrl-btn:hover{border-color:var(--accent);color:var(--accent);transform:scale(1.1)}
-.ctrl-btn.active{border-color:var(--accent);color:var(--accent);box-shadow:var(--shadow-glow)}
-.ctrl-play{width:64px;height:64px;background:linear-gradient(135deg,var(--accent),var(--accent4));border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;color:#000;box-shadow:0 8px 30px rgba(0,255,204,0.4);transition:all 0.3s;position:relative;overflow:hidden}
-.ctrl-play::before{content:'';position:absolute;inset:-2px;background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));border-radius:50%;z-index:-1;animation:spin 3s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.ctrl-play:hover{transform:scale(1.1);box-shadow:0 12px 40px rgba(99,102,241,0.6)}
-.ctrl-play:active{transform:scale(0.95)}
-.ctrl-play.scanning{animation:pulse 1s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,204,0.7)}50%{box-shadow:0 0 0 20px rgba(0,255,204,0)}}
-
-/* Panels */
-.filter-panel,.history-panel,.settings-panel{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px;animation:slideDown 0.4s ease;box-shadow:var(--shadow)}
-@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
-.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.panel-header h3{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--accent)}
-.btn-close{width:30px;height:30px;background:var(--card2);border:1px solid var(--border);color:var(--text2);cursor:pointer;border-radius:50%;font-size:12px;transition:all 0.3s}
-.btn-close:hover{border-color:var(--accent2);color:var(--accent2)}
-
-.filter-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.preset-btn{padding:6px 12px;background:var(--card2);border:1px solid var(--border);color:var(--text2);cursor:pointer;border-radius:20px;font-size:10px;font-family:'Cairo',sans-serif;transition:all 0.3s}
-.preset-btn:hover{border-color:var(--accent)}
-.preset-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
-.filter-options{display:flex;gap:20px;justify-content:space-around;flex-wrap:wrap}
-.filter-knob{display:flex;flex-direction:column;align-items:center;gap:8px}
-.filter-knob span{font-size:10px;color:var(--text2)}
-.gold-slider{width:120px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(0,255,204,0.2);border-radius:2px;outline:none;cursor:pointer}
-.gold-slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 15px rgba(0,255,204,0.5)}
-
-/* Switch */
-.switch{position:relative;display:inline-block;width:50px;height:26px}
-.switch input{opacity:0;width:0;height:0}
-.slider{position:absolute;cursor:pointer;inset:0;background:var(--card2);border:1px solid var(--border);transition:0.3s;border-radius:26px}
-.slider:before{position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;background:var(--text2);transition:0.3s;border-radius:50%}
-input:checked + .slider{background:var(--glass);border-color:var(--accent)}
-input:checked + .slider:before{transform:translateX(24px);background:var(--accent);box-shadow:0 0 10px rgba(0,255,204,0.5)}
-
-/* History */
-.history-content{max-height:180px;overflow-y:auto}
-.history-line{padding:8px 0;font-size:12px;color:var(--text2);text-align:center;border-bottom:1px solid rgba(255,255,255,0.05)}
-.history-line.active{color:var(--accent);font-weight:700}
-
-/* Settings */
-.settings-content{display:flex;flex-direction:column;gap:12px}
-.setting-item{display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--card2);border-radius:var(--radius-xs)}
-.setting-item span{font-size:11px}
-.setting-input{width:60px;padding:5px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;text-align:center;font-family:'Orbitron',sans-serif}
-
-/* Network List */
-.playlist-section{margin-top:8px;padding-bottom:30px}
-.playlist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
-.playlist-header h3{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
-.network-stats{font-size:10px;color:var(--accent);font-family:'Orbitron',sans-serif}
-.playlist{display:flex;flex-direction:column;gap:8px}
-.network-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.3s}
-.network-item:hover{border-color:var(--accent);background:var(--glass);transform:translateX(-5px)}
-.network-item.active{border-color:var(--accent);background:rgba(0,255,204,0.08);box-shadow:var(--shadow-glow)}
-.network-item .n-icon{width:40px;height:40px;background:var(--glass);border-radius:var(--radius-xs);display:flex;align-items:center;justify-content:center;font-size:20px}
-.network-item .n-info{flex:1;min-width:0}
-.network-item .n-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.network-item .n-details{font-size:10px;color:var(--text3);margin-top:2px}
-.network-item .n-signal{display:flex;flex-direction:column;align-items:center;gap:4px}
-.signal-bars{display:flex;align-items:flex-end;gap:2px;height:24px}
-.signal-bar{width:5px;background:var(--accent);border-radius:2px;transition:all 0.3s}
-.signal-percent{font-size:9px;color:var(--accent);font-family:'Orbitron',sans-serif}
-.empty-playlist{text-align:center;padding:40px;color:var(--text3)}
-.empty-playlist span{font-size:48px;display:block;margin-bottom:12px}
-.empty-playlist p{font-size:13px}
-
-/* Modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
-.modal.active{display:flex}
-.modal-content{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;max-width:400px;width:100%;animation:modalIn 0.3s ease}
-@keyframes modalIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.modal-header h3{font-family:'Orbitron',sans-serif;font-size:16px;color:var(--accent)}
-.modal-body{display:flex;flex-direction:column;gap:10px}
-.modal-item{display:flex;justify-content:space-between;padding:8px;background:var(--card2);border-radius:var(--radius-xs)}
-.modal-item .label{font-size:11px;color:var(--text3)}
-.modal-item .value{font-size:12px;font-weight:600}
-
-.toast{position:fixed;bottom:35px;left:50%;transform:translateX(-50%) translateY(130px);background:var(--card);border:1px solid var(--accent);color:var(--text);padding:12px 24px;border-radius:25px;font-size:12px;z-index:2000;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);font-family:'Cairo',sans-serif;box-shadow:var(--shadow-glow)}
-.toast.show{transform:translateX(-50%) translateY(0)}
-
-.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
-@keyframes particleFloat{0%{transform:translateY(110vh) scale(0);opacity:0}15%{opacity:0.7}85%{opacity:0.1}100%{transform:translateY(-10vh) scale(1.5);opacity:0}}
-
-@media(max-width:400px){
-    .stats-bar{grid-template-columns:repeat(2,1fr)}
-    .controls{gap:10px}
-    .ctrl-btn{width:38px;height:38px}
-    .ctrl-play{width:56px;height:56px}
-}"""
+class NetworkScannerConfig:
+    """Configuration class for the network scanner"""
+    
+    # Scan settings
+    DEFAULT_TIMEOUT = 5
+    MAX_RETRIES = 3
+    SCAN_INTERVAL = 2  # seconds between scans
+    
+    # Output settings
+    OUTPUT_FORMATS = ['json', 'csv', 'txt', 'html']
+    DEFAULT_OUTPUT = 'json'
+    
+    # Color codes for terminal
+    COLORS = {
+        'red': '\033[91m',
+        'green': '\033[92m',
+        'yellow': '\033[93m',
+        'blue': '\033[94m',
+        'magenta': '\033[95m',
+        'cyan': '\033[96m',
+        'white': '\033[97m',
+        'reset': '\033[0m',
+        'bold': '\033[1m',
+        'dim': '\033[2m'
+    }
+    
+    # Security types
+    SECURITY_TYPES = {
+        0: 'Open',
+        1: 'WEP',
+        2: 'WPA',
+        3: 'WPA2',
+        4: 'WPA3',
+        5: 'WPA/WPA2',
+        6: 'Enterprise',
+        7: 'Unknown'
+    }
+    
+    # Frequency bands
+    FREQUENCY_BANDS = {
+        '2.4 GHz': list(range(1, 15)),
+        '5 GHz': [36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165],
+        '6 GHz': [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113, 117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233]
+    }
 
 # ═══════════════════════════════════════════════════════════
-# 📡 3-9. JS Files
+# 📡 NETWORK DATA MODELS
 # ═══════════════════════════════════════════════════════════
 
-def build_storage_js():
-    return """const KEYS={networks:'wifinetscanpro_networks',settings:'wifinetscanpro_settings',history:'wifinetscanpro_history',filters:'wifinetscanpro_filters'};
-function saveData(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){console.error('Save error:',e);return false}}
-function loadData(k,d=null){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){console.error('Load error:',e);return d}}
-function saveNetworks(nets){const data=nets.map(n=>({id:n.id,ssid:n.ssid,mac:n.mac,signal:n.signal,frequency:n.frequency,channel:n.channel,security:n.security,encryption:n.encryption,maxSpeed:n.maxSpeed,firstSeen:n.firstSeen,lastSeen:n.lastSeen,hidden:n.hidden}));return saveData(KEYS.networks,data)}
-function loadNetworks(){return loadData(KEYS.networks,[])}
-function saveFilters(f){saveData(KEYS.filters,f)}
-function loadFilters(){return loadData(KEYS.filters,{type:'all',minSignal:0,showHidden:false})}
-function saveHistory(h){saveData(KEYS.history,h)}
-function loadHistory(){return loadData(KEYS.history,[])}
-function addToHistory(entry){const h=loadHistory();h.unshift(entry);if(h.length>50)h.pop();saveHistory(h)}
-function saveSettings(s){saveData(KEYS.settings,s)}
-function loadSettings(){return loadData(KEYS.settings,{autoScan:false,scanInterval:10,soundEnabled:true})}"""
-
-def build_particles_js():
-    return """function initParticles(){const c=document.getElementById('particlesContainer');c.innerHTML='';const cols=['#00ffcc','#ff44aa','#6366f1','#ffaa00'];for(let i=0;i<50;i++){const p=document.createElement('div');p.className='particle';const size=Math.random()*4+1;p.style.cssText=`left:${Math.random()*100}%;bottom:-10px;width:${size}px;height:${size}px;background:radial-gradient(circle,${cols[i%4]} 0%,transparent 70%);animation:particleFloat ${Math.random()*5+5}s ease-in infinite;animation-delay:${Math.random()*5}s`;c.appendChild(p)}}"""
-
-def build_visualizer_js():
-    return """let vizCanvas,vizCtx,networkData=[],vizAnimationId;
-function initVisualizer(){vizCanvas=document.getElementById('vizCanvas');vizCtx=vizCanvas.getContext('2d');resizeViz();window.addEventListener('resize',resizeViz);for(let i=0;i<64;i++)networkData.push(Math.random()*0.3);drawViz()}
-function resizeViz(){const c=vizCanvas.parentElement;vizCanvas.width=c.clientWidth;vizCanvas.height=c.clientHeight}
-function drawViz(){vizAnimationId=requestAnimationFrame(drawViz);const w=vizCanvas.width,h=vizCanvas.height;vizCtx.fillStyle='rgba(10,10,26,0.3)';vizCtx.fillRect(0,0,w,h);const cx=w/2,cy=h/2,r=Math.min(w,h)*0.35;for(let i=0;i<networkData.length;i++){const a=(i/networkData.length)*Math.PI*2;const val=networkData[i];const x1=cx+Math.cos(a)*(r+val*60);const y1=cy+Math.sin(a)*(r+val*60);const x2=cx+Math.cos(a)*(r-val*40);const y2=cy+Math.sin(a)*(r-val*40);const grad=vizCtx.createLinearGradient(x1,y1,x2,y2);grad.addColorStop(0,`rgba(0,255,204,${0.3+val})`);grad.addColorStop(0.5,`rgba(99,102,241,${0.2+val})`);grad.addColorStop(1,`rgba(255,68,170,${0.15+val})`);vizCtx.beginPath();vizCtx.moveTo(x1,y1);vizCtx.lineTo(x2,y2);vizCtx.strokeStyle=grad;vizCtx.lineWidth=1.5+val*2;vizCtx.stroke();vizCtx.beginPath();vizCtx.arc(x1,y1,3+val*15,0,Math.PI*2);vizCtx.fillStyle=`rgba(0,255,204,${0.6+val})`;vizCtx.shadowColor='#00ffcc';vizCtx.shadowBlur=10+val*20;vizCtx.fill();vizCtx.shadowBlur=0}
-vizCtx.beginPath();vizCtx.arc(cx,cy,8,0,Math.PI*2);vizCtx.fillStyle='#fff';vizCtx.shadowColor='#00ffcc';vizCtx.shadowBlur=30;vizCtx.fill();vizCtx.shadowBlur=0}
-function updateVizData(networks){if(!networks)return;for(let i=0;i<networkData.length;i++){const idx=Math.floor(i*networks.length/networkData.length);const net=networks[idx];const val=net?net.signal/100:0;networkData[i]=networkData[i]*0.9+val*0.1}}"""
-
-def build_scanner_js():
-    return """let networks=[],currentScan=null,isAutoScan=false,autoScanInterval=null;
-function initScanner(){networks=loadNetworks();renderNetworks();updateVisualizer();updateStats()}
-function startScan(){if(currentScan)return;const btn=document.getElementById('scanBtn');btn.classList.add('scanning');document.getElementById('scanIcon').className='fas fa-spinner fa-spin';document.getElementById('scanStatus').textContent='جاري المسح...';const startTime=Date.now();const totalDuration=3000;const progressInterval=setInterval(()=>{const elapsed=Date.now()-startTime;const progress=Math.min(100,(elapsed/totalDuration)*100);document.getElementById('progressFill').style.width=progress+'%';document.getElementById('progressPercent').textContent=Math.floor(progress)+'%';document.getElementById('scanDuration').textContent=formatTime(Math.floor(elapsed/1000))},100);setTimeout(()=>{clearInterval(progressInterval);performScan();document.getElementById('progressFill').style.width='100%';document.getElementById('progressPercent').textContent='100%';setTimeout(()=>{document.getElementById('progressFill').style.width='0%';document.getElementById('progressPercent').textContent='0%'},500)},totalDuration)}
-function performScan(){const mockNetworks=generateMockNetworks();networks=[...mockNetworks,...networks.filter(n=>!mockNetworks.find(m=>m.mac===n.mac))];saveNetworks(networks);renderNetworks();updateVisualizer();updateStats();addToHistory({time:new Date().toISOString(),count:mockNetworks.length});renderHistory();const btn=document.getElementById('scanBtn');btn.classList.remove('scanning');document.getElementById('scanIcon').className='fas fa-search';document.getElementById('scanStatus').textContent='اكتمل المسح';document.getElementById('networkCount').textContent=networks.length+' شبكة';document.getElementById('lastScan').textContent='آخر مسح: '+new Date().toLocaleTimeString('ar');showToast('✅ تم اكتشاف '+mockNetworks.length+' شبكة');if(loadSettings().soundEnabled){playNotificationSound()}}
-function generateMockNetworks(){const prefixes=['Home','Office','Guest','IoT','Smart','5G','Fiber','Net','WiFi','TP-Link','D-Link','Cisco','Netgear','ASUS','Xiaomi'];const securities=['WPA2','WPA3','WPA/WPA2','WEP','Open'];const networks=[];const count=Math.floor(Math.random()*15)+10;for(let i=0;i<count;i++){const is5GHz=Math.random()>0.4;const freq=is5GHz?'5 GHz':'2.4 GHz';const channel=is5GHz?Math.floor(Math.random()*20)+36:Math.floor(Math.random()*11)+1;const signal=Math.floor(Math.random()*70)+30;const isHidden=Math.random()<0.1;networks.push({id:Date.now()+i+'_'+Math.random(),ssid:isHidden?'<Hidden Network>':prefixes[Math.floor(Math.random()*prefixes.length)]+'_'+Math.floor(Math.random()*1000),mac:generateMAC(),signal:signal,frequency:freq,channel:channel,security:securities[Math.floor(Math.random()*securities.length)],encryption:Math.random()>0.3?'AES':'TKIP',maxSpeed:is5GHz?'1.3 Gbps':'450 Mbps',firstSeen:new Date().toISOString(),lastSeen:new Date().toISOString(),hidden:isHidden})}return networks}
-function generateMAC(){const hex='0123456789ABCDEF';let mac='';for(let i=0;i<6;i++){if(i>0)mac+=':';mac+=hex[Math.floor(Math.random()*16)]+hex[Math.floor(Math.random()*16)]}return mac}
-function toggleAutoScan(){const settings=loadSettings();isAutoScan=!isAutoScan;settings.autoScan=isAutoScan;saveSettings(settings);document.getElementById('autoScanBtn').classList.toggle('active',isAutoScan);if(isAutoScan){showToast('🔄 المسح التلقائي مفعل');autoScanInterval=setInterval(startScan,settings.scanInterval*1000)}else{showToast('⏸ المسح التلقائي متوقف');if(autoScanInterval)clearInterval(autoScanInterval)}}
-function sortNetworks(){networks.sort((a,b)=>b.signal-a.signal);renderNetworks();showToast('📊 تم الترتيب حسب قوة الإشارة')}
-function clearNetworks(){if(confirm('هل تريد مسح جميع الشبكات؟')){networks=[];saveNetworks(networks);renderNetworks();updateVisualizer();updateStats();showToast('🗑 تم مسح الشبكات')}}
-function exportData(){const data={exportTime:new Date().toISOString(),totalNetworks:networks.length,networks:networks};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='wifi_scan_'+Date.now()+'.json';a.click();URL.revokeObjectURL(url);showToast('📥 تم تصدير البيانات')}
-function renderNetworks(){const c=document.getElementById('networkList');if(!networks.length){c.innerHTML='<div class="empty-playlist"><span>📡</span><p>اضغط زر المسح لبدء اكتشاف الشبكات</p></div>';document.getElementById('networkStats').textContent='0 شبكة';return}const filtered=getFilteredNetworks();document.getElementById('networkStats').textContent=filtered.length+' شبكة';c.innerHTML=filtered.map(n=>{const signalBars=generateSignalBars(n.signal);const securityIcon=getSecurityIcon(n.security);return `<div class="network-item" onclick="showNetworkDetails('${n.id}')"><div class="n-icon">${securityIcon}</div><div class="n-info"><div class="n-name">${n.ssid}</div><div class="n-details">${n.frequency} • Ch ${n.channel} • ${n.security}</div></div><div class="n-signal">${signalBars}<span class="signal-percent">${n.signal}%</span></div><span class="n-del" onclick="event.stopPropagation();deleteNetwork('${n.id}')"><i class="fas fa-times"></i></span></div>`}).join('')}
-function generateSignalBars(signal){const bars=Math.ceil(signal/25);let html='<div class="signal-bars">';for(let i=0;i<4;i++){const height=[6,12,18,24][i];html+=`<div class="signal-bar" style="height:${height}px;opacity:${i<bars?1:0.2}"></div>`}html+='</div>';return html}
-function getSecurityIcon(security){if(security==='Open')return '🔓';if(security==='WEP')return '⚠️';if(security==='WPA3')return '🛡️';return '🔒'}
-function deleteNetwork(id){networks=networks.filter(n=>n.id!==id);saveNetworks(networks);renderNetworks();updateVisualizer();updateStats();showToast('🗑 تم حذف الشبكة')}
-function showNetworkDetails(id){const n=networks.find(n=>n.id===id);if(!n)return;document.getElementById('modalTitle').textContent=n.ssid;document.getElementById('modalBody').innerHTML=`<div class="modal-item"><span class="label">🔒 الأمان</span><span class="value">${n.security}</span></div><div class="modal-item"><span class="label">📶 الإشارة</span><span class="value">${n.signal}%</span></div><div class="modal-item"><span class="label">📡 التردد</span><span class="value">${n.frequency}</span></div><div class="modal-item"><span class="label">🔢 القناة</span><span class="value">${n.channel}</span></div><div class="modal-item"><span class="label">💻 MAC</span><span class="value">${n.mac}</span></div><div class="modal-item"><span class="label">⚡ السرعة</span><span class="value">${n.maxSpeed}</span></div><div class="modal-item"><span class="label">🔐 التشفير</span><span class="value">${n.encryption}</span></div>`;document.getElementById('networkModal').classList.add('active')}
-function closeModal(){document.getElementById('networkModal').classList.remove('active')}
-function updateStats(){document.getElementById('totalNetworks').textContent=networks.length;const secure=networks.filter(n=>n.security!=='Open').length;const open=networks.filter(n=>n.security==='Open').length;document.getElementById('secureNetworks').textContent=secure;document.getElementById('openNetworks').textContent=open;const avgSignal=networks.length?Math.round(networks.reduce((sum,n)=>sum+n.signal,0)/networks.length):0;document.getElementById('avgSignal').textContent=avgSignal+'%'}
-function updateVisualizer(){updateVizData(networks)}
-function playNotificationSound(){try{const audioCtx=new(window.AudioContext||window.webkitAudioContext)();const oscillator=audioCtx.createOscillator();const gainNode=audioCtx.createGain();oscillator.connect(gainNode);gainNode.connect(audioCtx.destination);oscillator.frequency.value=800;gainNode.gain.value=0.3;oscillator.start();setTimeout(()=>{oscillator.stop();audioCtx.close()},200)}catch(e){}}
-function formatTime(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)}"""
-
-def build_filters_js():
-    return """let currentFilters={type:'all',minSignal:0,showHidden:false};
-function initFilters(){const saved=loadFilters();currentFilters=saved||currentFilters;document.getElementById('minSignal').value=currentFilters.minSignal;document.getElementById('minSignalValue').textContent=currentFilters.minSignal+'%';document.getElementById('showHidden').checked=currentFilters.showHidden}
-function toggleFilters(){const p=document.getElementById('filterPanel');p.style.display=p.style.display==='none'?'block':'none';document.getElementById('btnFilters').classList.toggle('active',p.style.display==='block')}
-function setFilter(type,el){document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');currentFilters.type=type;saveFilters(currentFilters);renderNetworks()}
-function updateFilters(){currentFilters.minSignal=parseInt(document.getElementById('minSignal').value);currentFilters.showHidden=document.getElementById('showHidden').checked;document.getElementById('minSignalValue').textContent=currentFilters.minSignal+'%';saveFilters(currentFilters);renderNetworks()}
-function getFilteredNetworks(){return networks.filter(n=>{if(!currentFilters.showHidden&&n.hidden)return false;if(n.signal<currentFilters.minSignal)return false;switch(currentFilters.type){case 'secure':return n.security!=='Open';case 'open':return n.security==='Open';case '5ghz':return n.frequency.includes('5');case '2ghz':return n.frequency.includes('2.4');default:return true}})}"""
-
-def build_history_js():
-    return """function toggleHistory(){const p=document.getElementById('historyPanel');p.style.display=p.style.display==='none'?'block':'none';document.getElementById('btnHistory').classList.toggle('active',p.style.display==='block');renderHistory()}
-function renderHistory(){const c=document.getElementById('historyContent');const h=loadHistory();if(!h.length){c.innerHTML='<p class="history-line">📡 لا يوجد سجل بعد</p>';return}c.innerHTML=h.map((entry,i)=>`<p class="history-line ${i===0?'active':''}">🔍 ${new Date(entry.time).toLocaleString('ar')} - ${entry.count} شبكة</p>`).join('')}
-function clearHistory(){if(confirm('هل تريد مسح السجل؟')){saveHistory([]);renderHistory();showToast('🗑 تم مسح السجل')}}"""
-
-def build_settings_js():
-    return """function toggleSettings(){const p=document.getElementById('settingsPanel');p.style.display=p.style.display==='none'?'block':'none';document.getElementById('btnSettings').classList.toggle('active',p.style.display==='block');loadSettingsToUI()}
-function loadSettingsToUI(){const s=loadSettings();document.getElementById('autoScanSetting').checked=s.autoScan;document.getElementById('scanInterval').value=s.scanInterval;document.getElementById('soundEnabled').checked=s.soundEnabled}
-function updateSettings(){const s={autoScan:document.getElementById('autoScanSetting').checked,scanInterval:parseInt(document.getElementById('scanInterval').value)||10,soundEnabled:document.getElementById('soundEnabled').checked};saveSettings(s);showToast('✅ تم حفظ الإعدادات')}"""
-
-def build_app_js():
-    return """initParticles();initVisualizer();initScanner();initFilters();document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});"""
+class NetworkInfo:
+    """Network information data class"""
+    
+    def __init__(self):
+        self.ssid: str = ""
+        self.bssid: str = ""
+        self.signal: int = 0
+        self.frequency: str = ""
+        self.channel: int = 0
+        self.security: str = "Unknown"
+        self.encryption: str = ""
+        self.max_speed: str = ""
+        self.vendor: str = "Unknown"
+        self.first_seen: str = ""
+        self.last_seen: str = ""
+        self.is_hidden: bool = False
+        self.connected: bool = False
+        self.ip_address: str = ""
+        self.gateway: str = ""
+        self.subnet: str = ""
+        self.dns_servers: List[str] = []
+        
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return {
+            'ssid': self.ssid,
+            'bssid': self.bssid,
+            'signal': self.signal,
+            'frequency': self.frequency,
+            'channel': self.channel,
+            'security': self.security,
+            'encryption': self.encryption,
+            'max_speed': self.max_speed,
+            'vendor': self.vendor,
+            'first_seen': self.first_seen,
+            'last_seen': self.last_seen,
+            'is_hidden': self.is_hidden,
+            'connected': self.connected,
+            'ip_address': self.ip_address,
+            'gateway': self.gateway,
+            'subnet': self.subnet,
+            'dns_servers': self.dns_servers
+        }
+    
+    def __str__(self) -> str:
+        """String representation"""
+        security_icon = '🔓' if self.security == 'Open' else '🔒'
+        signal_bars = '▂▄▆█'[:max(1, min(4, self.signal // 25))]
+        return f"{security_icon} {self.ssid:<30} {signal_bars:<4} {self.signal}%  {self.frequency:<8} Ch:{self.channel:<3} {self.security}"
 
 # ═══════════════════════════════════════════════════════════
-# 📡 MAIN
+# 📡 NETWORK SCANNER CORE
+# ═══════════════════════════════════════════════════════════
+
+class NetworkScanner:
+    """Main network scanner class"""
+    
+    def __init__(self, config: Optional[NetworkScannerConfig] = None):
+        self.config = config or NetworkScannerConfig()
+        self.networks: Dict[str, NetworkInfo] = {}
+        self.scan_history: List[Dict[str, Any]] = []
+        self.is_scanning = False
+        self.scan_thread = None
+        self.current_network = self._get_current_network_info()
+        
+        # Initialize rich console if available
+        if RICH_AVAILABLE:
+            self.console = Console()
+        else:
+            self.console = None
+            
+        # Detect platform
+        self.platform = platform.system()
+        self._detect_capabilities()
+        
+    def _detect_capabilities(self):
+        """Detect available scanning capabilities"""
+        self.capabilities = {
+            'pywifi': PYWIFI_AVAILABLE,
+            'nmap': NMAP_AVAILABLE,
+            'netifaces': NETIFACES_AVAILABLE,
+            'system_commands': self._check_system_commands(),
+            'requests': REQUESTS_AVAILABLE
+        }
+        
+    def _check_system_commands(self) -> Dict[str, bool]:
+        """Check available system commands"""
+        commands = {
+            'iwlist': False,
+            'iw': False,
+            'netsh': False,
+            'airport': False,
+            'nmcli': False
+        }
+        
+        for cmd in commands:
+            try:
+                result = subprocess.run(['which', cmd] if self.platform != 'Windows' else ['where', cmd],
+                                      capture_output=True, text=True, timeout=2)
+                commands[cmd] = result.returncode == 0
+            except:
+                pass
+                
+        return commands
+    
+    def _get_current_network_info(self) -> NetworkInfo:
+        """Get current network information"""
+        info = NetworkInfo()
+        
+        try:
+            # Try to get current WiFi connection
+            if PYWIFI_AVAILABLE:
+                wifi = pywifi.PyWiFi()
+                iface = wifi.interfaces()[0]
+                if iface.status() == const.IFACE_CONNECTED:
+                    profile = iface.network_profiles()[0]
+                    info.ssid = profile.ssid
+                    info.connected = True
+                    
+            # Get IP configuration
+            if NETIFACES_AVAILABLE:
+                for iface in netifaces.interfaces():
+                    addrs = netifaces.ifaddresses(iface)
+                    if netifaces.AF_INET in addrs:
+                        for addr in addrs[netifaces.AF_INET]:
+                            if 'addr' in addr and not addr['addr'].startswith('127.'):
+                                info.ip_address = addr['addr']
+                                if 'netmask' in addr:
+                                    info.subnet = addr['netmask']
+                            
+                    if netifaces.AF_LINK in addrs:
+                        for addr in addrs[netifaces.AF_LINK]:
+                            if 'addr' in addr:
+                                info.bssid = addr['addr']
+                                
+            # Get gateway
+            if self.platform == 'Linux':
+                try:
+                    result = subprocess.run(['ip', 'route', 'show', 'default'],
+                                          capture_output=True, text=True, timeout=2)
+                    if result.returncode == 0:
+                        parts = result.stdout.split()
+                        if len(parts) > 2:
+                            info.gateway = parts[2]
+                except:
+                    pass
+                    
+            # Get DNS servers
+            try:
+                with open('/etc/resolv.conf', 'r') as f:
+                    for line in f:
+                        if line.startswith('nameserver'):
+                            info.dns_servers.append(line.split()[1])
+            except:
+                pass
+                
+        except Exception as e:
+            if self.console:
+                self.console.print(f"[yellow]⚠️  خطأ في الحصول على معلومات الشبكة: {e}[/yellow]")
+                
+        return info
+    
+    def scan_networks(self, interface: Optional[str] = None) -> List[NetworkInfo]:
+        """Scan for available networks"""
+        self.is_scanning = True
+        networks = []
+        
+        try:
+            # Try pywifi first
+            if PYWIFI_AVAILABLE:
+                networks.extend(self._scan_with_pywifi())
+            
+            # Try system commands
+            if not networks or len(networks) < 3:
+                networks.extend(self._scan_with_system_commands(interface))
+            
+            # Try nmap for network mapping
+            if NMAP_AVAILABLE:
+                networks.extend(self._scan_with_nmap())
+                
+            # Deduplicate networks
+            networks = self._deduplicate_networks(networks)
+            
+            # Update network database
+            current_time = datetime.now().isoformat()
+            for net in networks:
+                if net.bssid in self.networks:
+                    # Update existing network
+                    self.networks[net.bssid].signal = net.signal
+                    self.networks[net.bssid].last_seen = current_time
+                    self.networks[net.bssid].security = net.security
+                else:
+                    # New network
+                    net.first_seen = current_time
+                    net.last_seen = current_time
+                    self.networks[net.bssid] = net
+                    
+            # Add to history
+            self.scan_history.append({
+                'timestamp': current_time,
+                'count': len(networks),
+                'networks': [n.to_dict() for n in networks]
+            })
+            
+        finally:
+            self.is_scanning = False
+            
+        return networks
+    
+    def _scan_with_pywifi(self) -> List[NetworkInfo]:
+        """Scan using pywifi library"""
+        networks = []
+        
+        try:
+            wifi = pywifi.PyWiFi()
+            iface = wifi.interfaces()[0]
+            iface.scan()
+            time.sleep(3)  # Wait for scan results
+            
+            results = iface.scan_results()
+            for result in results:
+                net = NetworkInfo()
+                net.ssid = result.ssid or "<Hidden Network>"
+                net.bssid = result.bssid
+                net.signal = result.signal
+                net.frequency = f"{result.freq / 1000:.1f} GHz"
+                net.channel = self._freq_to_channel(result.freq)
+                net.security = self._parse_security(result)
+                net.is_hidden = result.ssid == ""
+                
+                networks.append(net)
+                
+        except Exception as e:
+            if self.console:
+                self.console.print(f"[yellow]⚠️  pywifi scan failed: {e}[/yellow]")
+                
+        return networks
+    
+    def _scan_with_system_commands(self, interface: Optional[str] = None) -> List[NetworkInfo]:
+        """Scan using system commands"""
+        networks = []
+        
+        try:
+            if self.platform == 'Linux':
+                # Try iwlist
+                if self.config.capabilities['system_commands'].get('iwlist', False):
+                    cmd = ['iwlist', 'scan']
+                    if interface:
+                        cmd = ['iwlist', interface, 'scan']
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.config.DEFAULT_TIMEOUT)
+                    networks.extend(self._parse_iwlist_output(result.stdout))
+                
+                # Try iw
+                if self.config.capabilities['system_commands'].get('iw', False):
+                    cmd = ['iw', 'dev', 'scan']
+                    if interface:
+                        cmd = ['iw', 'dev', interface, 'scan']
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.config.DEFAULT_TIMEOUT)
+                    networks.extend(self._parse_iw_output(result.stdout))
+                
+                # Try nmcli
+                if self.config.capabilities['system_commands'].get('nmcli', False):
+                    result = subprocess.run(['nmcli', '-t', '-f', 'SSID,BSSID,SIGNAL,FREQ,SECURITY', 'dev', 'wifi', 'list'],
+                                          capture_output=True, text=True, timeout=self.config.DEFAULT_TIMEOUT)
+                    networks.extend(self._parse_nmcli_output(result.stdout))
+                    
+            elif self.platform == 'Windows':
+                # Use netsh
+                if self.config.capabilities['system_commands'].get('netsh', False):
+                    result = subprocess.run(['netsh', 'wlan', 'show', 'networks', 'mode=bssid'],
+                                          capture_output=True, text=True, timeout=self.config.DEFAULT_TIMEOUT)
+                    networks.extend(self._parse_netsh_output(result.stdout))
+                    
+            elif self.platform == 'Darwin':  # macOS
+                # Use airport
+                if self.config.capabilities['system_commands'].get('airport', False):
+                    result = subprocess.run(['/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport', '-s'],
+                                          capture_output=True, text=True, timeout=self.config.DEFAULT_TIMEOUT)
+                    networks.extend(self._parse_airport_output(result.stdout))
+                    
+        except Exception as e:
+            if self.console:
+                self.console.print(f"[yellow]⚠️  System command scan failed: {e}[/yellow]")
+                
+        return networks
+    
+    def _scan_with_nmap(self) -> List[NetworkInfo]:
+        """Scan using nmap for network mapping"""
+        networks = []
+        
+        try:
+            nm = nmap.PortScanner()
+            # Get local network range
+            if self.current_network.ip_address and self.current_network.subnet:
+                network_range = self._get_network_range(
+                    self.current_network.ip_address,
+                    self.current_network.subnet
+                )
+                if network_range:
+                    nm.scan(hosts=network_range, arguments='-sn -T4')
+                    
+                    for host in nm.all_hosts():
+                        net = NetworkInfo()
+                        net.bssid = nm[host].get('addresses', {}).get('mac', 'Unknown')
+                        net.ip_address = host
+                        net.vendor = nm[host].get('vendor', {}).get(net.bssid, 'Unknown')
+                        net.connected = True
+                        networks.append(net)
+                        
+        except Exception as e:
+            if self.console:
+                self.console.print(f"[yellow]⚠️  nmap scan failed: {e}[/yellow]")
+                
+        return networks
+    
+    def _deduplicate_networks(self, networks: List[NetworkInfo]) -> List[NetworkInfo]:
+        """Remove duplicate networks"""
+        seen = {}
+        unique = []
+        
+        for net in networks:
+            key = net.bssid or net.ssid
+            if key not in seen:
+                seen[key] = net
+                unique.append(net)
+            else:
+                # Update with better signal
+                if net.signal > seen[key].signal:
+                    seen[key].signal = net.signal
+                    
+        return list(seen.values())
+    
+    def _freq_to_channel(self, freq: int) -> int:
+        """Convert frequency to channel number"""
+        if 2400 <= freq <= 2500:
+            return (freq - 2407) // 5
+        elif 5000 <= freq <= 5900:
+            return (freq - 5000) // 5
+        return 0
+    
+    def _parse_security(self, result) -> str:
+        """Parse security type from scan result"""
+        try:
+            if hasattr(result, 'akm'):
+                akm = result.akm
+                if const.AKM_TYPE_WPA2PSK in akm:
+                    return 'WPA2'
+                elif const.AKM_TYPE_WPAPSK in akm:
+                    return 'WPA'
+                elif const.AKM_TYPE_WPA2ENT in akm:
+                    return 'WPA2-Enterprise'
+                elif const.AKM_TYPE_WPA3 in akm:
+                    return 'WPA3'
+                elif len(akm) == 0:
+                    return 'Open'
+            return 'Unknown'
+        except:
+            return 'Unknown'
+    
+    def _parse_iwlist_output(self, output: str) -> List[NetworkInfo]:
+        """Parse iwlist scan output"""
+        networks = []
+        current = None
+        
+        for line in output.split('\n'):
+            line = line.strip()
+            
+            if 'Cell' in line and 'Address' in line:
+                if current:
+                    networks.append(current)
+                current = NetworkInfo()
+                current.bssid = line.split('Address:')[1].strip()
+                
+            elif current and 'ESSID' in line:
+                essid = line.split('ESSID:')[1].strip().strip('"')
+                current.ssid = essid if essid else '<Hidden Network>'
+                current.is_hidden = essid == ''
+                
+            elif current and 'Signal level' in line:
+                try:
+                    signal_str = line.split('Signal level=')[1].split()[0]
+                    if 'dBm' in line:
+                        dbm = int(signal_str)
+                        current.signal = self._dbm_to_percent(dbm)
+                    else:
+                        current.signal = int(signal_str.split('/')[0])
+                except:
+                    pass
+                    
+            elif current and 'Frequency' in line:
+                try:
+                    freq = float(line.split(':')[1].split()[0])
+                    current.frequency = f"{freq} GHz"
+                    current.channel = int(line.split('Channel')[1].split(')')[0])
+                except:
+                    pass
+                    
+            elif current and 'Encryption key' in line:
+                current.security = 'Open' if 'off' in line else 'Secured'
+                
+        if current:
+            networks.append(current)
+            
+        return networks
+    
+    def _parse_iw_output(self, output: str) -> List[NetworkInfo]:
+        """Parse iw scan output"""
+        networks = []
+        current = None
+        
+        for line in output.split('\n'):
+            line = line.strip()
+            
+            if line.startswith('BSS'):
+                if current:
+                    networks.append(current)
+                current = NetworkInfo()
+                current.bssid = line.split()[1].split('(')[0]
+                
+            elif current and line.startswith('SSID:'):
+                current.ssid = line.split('SSID:')[1].strip() or '<Hidden Network>'
+                current.is_hidden = current.ssid == '<Hidden Network>'
+                
+            elif current and line.startswith('signal:'):
+                try:
+                    dbm = float(line.split(':')[1].split()[0])
+                    current.signal = self._dbm_to_percent(dbm)
+                except:
+                    pass
+                    
+            elif current and line.startswith('freq:'):
+                try:
+                    freq = float(line.split(':')[1])
+                    current.frequency = f"{freq/1000:.1f} GHz"
+                except:
+                    pass
+                    
+            elif current and 'RSN:' in line:
+                current.security = 'WPA2'
+            elif current and 'WPA:' in line:
+                current.security = 'WPA'
+                
+        if current:
+            networks.append(current)
+            
+        return networks
+    
+    def _parse_nmcli_output(self, output: str) -> List[NetworkInfo]:
+        """Parse nmcli output"""
+        networks = []
+        
+        for line in output.split('\n'):
+            if not line.strip():
+                continue
+                
+            parts = line.split(':')
+            if len(parts) >= 5:
+                net = NetworkInfo()
+                net.ssid = parts[0] or '<Hidden Network>'
+                net.bssid = parts[1]
+                try:
+                    net.signal = int(parts[2])
+                except:
+                    net.signal = 0
+                try:
+                    freq = float(parts[3])
+                    net.frequency = f"{freq/1000:.1f} GHz"
+                except:
+                    pass
+                net.security = parts[4] if parts[4] else 'Open'
+                networks.append(net)
+                
+        return networks
+    
+    def _parse_netsh_output(self, output: str) -> List[NetworkInfo]:
+        """Parse netsh output"""
+        networks = []
+        current = None
+        
+        for line in output.split('\n'):
+            line = line.strip()
+            
+            if line.startswith('SSID'):
+                if current:
+                    networks.append(current)
+                current = NetworkInfo()
+                current.ssid = line.split(':')[1].strip()
+                current.is_hidden = current.ssid == ''
+                
+            elif current and line.startswith('BSSID'):
+                current.bssid = line.split(':')[1].strip()
+                
+            elif current and line.startswith('Signal'):
+                try:
+                    signal_str = line.split(':')[1].strip().replace('%', '')
+                    current.signal = int(signal_str)
+                except:
+                    pass
+                    
+            elif current and line.startswith('Authentication'):
+                auth = line.split(':')[1].strip()
+                current.security = auth if auth != 'Open' else 'Open'
+                
+            elif current and line.startswith('Channel'):
+                try:
+                    current.channel = int(line.split(':')[1].strip())
+                    current.frequency = '2.4 GHz' if current.channel <= 14 else '5 GHz'
+                except:
+                    pass
+                    
+        if current:
+            networks.append(current)
+            
+        return networks
+    
+    def _parse_airport_output(self, output: str) -> List[NetworkInfo]:
+        """Parse airport output"""
+        networks = []
+        lines = output.split('\n')[1:]  # Skip header
+        
+        for line in lines:
+            if not line.strip():
+                continue
+                
+            parts = line.split()
+            if len(parts) >= 3:
+                net = NetworkInfo()
+                net.ssid = parts[0]
+                net.bssid = parts[1]
+                try:
+                    net.signal = int(parts[2])
+                except:
+                    net.signal = 0
+                if len(parts) > 3:
+                    net.channel = int(parts[3])
+                    net.frequency = '2.4 GHz' if net.channel <= 14 else '5 GHz'
+                if len(parts) > 4:
+                    net.security = parts[4]
+                networks.append(net)
+                
+        return networks
+    
+    def _dbm_to_percent(self, dbm: int) -> int:
+        """Convert dBm to percentage"""
+        if dbm <= -100:
+            return 0
+        elif dbm >= -50:
+            return 100
+        else:
+            return int((dbm + 100) * 2)
+    
+    def _get_network_range(self, ip: str, subnet: str) -> Optional[str]:
+        """Get network range from IP and subnet"""
+        try:
+            ip_parts = list(map(int, ip.split('.')))
+            subnet_parts = list(map(int, subnet.split('.')))
+            
+            network = [ip_parts[i] & subnet_parts[i] for i in range(4)]
+            broadcast = [network[i] | (255 - subnet_parts[i]) for i in range(4)]
+            
+            return f"{'.'.join(map(str, network))}/{sum(bin(x).count('1') for x in subnet_parts)}"
+        except:
+            return None
+
+# ═══════════════════════════════════════════════════════════
+# 📡 EXPORT MANAGER
+# ═══════════════════════════════════════════════════════════
+
+class ExportManager:
+    """Export scan results to different formats"""
+    
+    def __init__(self, scanner: NetworkScanner):
+        self.scanner = scanner
+        
+    def export_json(self, filename: str):
+        """Export to JSON"""
+        data = {
+            'scan_time': datetime.now().isoformat(),
+            'total_networks': len(self.scanner.networks),
+            'networks': [net.to_dict() for net in self.scanner.networks.values()]
+        }
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            
+    def export_csv(self, filename: str):
+        """Export to CSV"""
+        with open(filename, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['SSID', 'BSSID', 'Signal', 'Frequency', 'Channel', 'Security', 'Vendor'])
+            for net in self.scanner.networks.values():
+                writer.writerow([net.ssid, net.bssid, net.signal, net.frequency, net.channel, net.security, net.vendor])
+                
+    def export_txt(self, filename: str):
+        """Export to text"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write("=" * 60 + "\n")
+            f.write("  WiFi NETSCAN PRO - Network Scan Results\n")
+            f.write("=" * 60 + "\n\n")
+            f.write(f"Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Total Networks: {len(self.scanner.networks)}\n\n")
+            
+            for net in self.scanner.networks.values():
+                f.write(f"Network: {net.ssid}\n")
+                f.write(f"  BSSID: {net.bssid}\n")
+                f.write(f"  Signal: {net.signal}%\n")
+                f.write(f"  Frequency: {net.frequency}\n")
+                f.write(f"  Channel: {net.channel}\n")
+                f.write(f"  Security: {net.security}\n")
+                f.write(f"  Vendor: {net.vendor}\n")
+                f.write("-" * 40 + "\n")
+                
+    def export_html(self, filename: str):
+        """Export to HTML"""
+        html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>WiFi NETSCAN PRO - Results</title>
+            <style>
+                body { font-family: Arial, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { padding: 12px; text-align: right; border-bottom: 1px solid #333; }
+                th { background: #16213e; color: #00ffcc; }
+                tr:hover { background: #16213e; }
+                .signal-high { color: #00ff00; }
+                .signal-medium { color: #ffff00; }
+                .signal-low { color: #ff0000; }
+            </style>
+        </head>
+        <body>
+            <h1>📡 WiFi NETSCAN PRO - Scan Results</h1>
+            <p>Scan Time: """ + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + """</p>
+            <p>Total Networks: """ + str(len(self.scanner.networks)) + """</p>
+            <table>
+                <tr>
+                    <th>SSID</th>
+                    <th>BSSID</th>
+                    <th>Signal</th>
+                    <th>Frequency</th>
+                    <th>Channel</th>
+                    <th>Security</th>
+                </tr>
+        """
+        
+        for net in self.scanner.networks.values():
+            signal_class = 'signal-high' if net.signal >= 70 else 'signal-medium' if net.signal >= 40 else 'signal-low'
+            html += f"""
+                <tr>
+                    <td>{net.ssid}</td>
+                    <td>{net.bssid}</td>
+                    <td class="{signal_class}">{net.signal}%</td>
+                    <td>{net.frequency}</td>
+                    <td>{net.channel}</td>
+                    <td>{net.security}</td>
+                </tr>
+            """
+            
+        html += """
+            </table>
+        </body>
+        </html>
+        """
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(html)
+    
+    def export_all(self, prefix: str = "scan_results"):
+        """Export to all formats"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        exports = {
+            'json': f"{prefix}_{timestamp}.json",
+            'csv': f"{prefix}_{timestamp}.csv",
+            'txt': f"{prefix}_{timestamp}.txt",
+            'html': f"{prefix}_{timestamp}.html"
+        }
+        
+        self.export_json(exports['json'])
+        self.export_csv(exports['csv'])
+        self.export_txt(exports['txt'])
+        self.export_html(exports['html'])
+        
+        return exports
+
+# ═══════════════════════════════════════════════════════════
+# 📡 DISPLAY MANAGER
+# ═══════════════════════════════════════════════════════════
+
+class DisplayManager:
+    """Display scan results"""
+    
+    def __init__(self, scanner: NetworkScanner):
+        self.scanner = scanner
+        self.console = scanner.console if RICH_AVAILABLE else None
+        
+    def display_results(self, networks: List[NetworkInfo]):
+        """Display scan results"""
+        if self.console:
+            self._display_rich(networks)
+        else:
+            self._display_plain(networks)
+            
+    def _display_rich(self, networks: List[NetworkInfo]):
+        """Display using rich library"""
+        table = Table(
+            title="📡 WiFi NETSCAN PRO - Network Results",
+            box=box.ROUNDED,
+            header_style="bold cyan",
+            border_style="bright_blue"
+        )
+        
+        table.add_column("SSID", style="bold white", no_wrap=True)
+        table.add_column("BSSID", style="dim")
+        table.add_column("Signal", justify="center")
+        table.add_column("Frequency", justify="center")
+        table.add_column("Channel", justify="center")
+        table.add_column("Security", justify="center")
+        table.add_column("Status", justify="center")
+        
+        for net in networks:
+            signal_style = "green" if net.signal >= 70 else "yellow" if net.signal >= 40 else "red"
+            security_style = "green" if net.security == "Open" else "yellow" if "WPA" in net.security else "red"
+            status = "🔗" if net.connected else ""
+            
+            table.add_row(
+                net.ssid,
+                net.bssid,
+                f"[{signal_style}]{net.signal}%[/{signal_style}]",
+                net.frequency,
+                str(net.channel),
+                f"[{security_style}]{net.security}[/{security_style}]",
+                status
+            )
+            
+        self.console.print(table)
+        
+    def _display_plain(self, networks: List[NetworkInfo]):
+        """Display without rich library"""
+        print("\n" + "=" * 70)
+        print("  📡 WiFi NETSCAN PRO - Network Results")
+        print("=" * 70)
+        print(f"  {'SSID':<30} {'Signal':<8} {'Frequency':<10} {'Channel':<8} {'Security'}")
+        print("-" * 70)
+        
+        for net in networks:
+            signal_color = self.scanner.config.COLORS['green'] if net.signal >= 70 else \
+                          self.scanner.config.COLORS['yellow'] if net.signal >= 40 else \
+                          self.scanner.config.COLORS['red']
+            
+            print(f"  {net.ssid:<30} {signal_color}{net.signal}%{self.scanner.config.COLORS['reset']:<8} "
+                  f"{net.frequency:<10} {net.channel:<8} {net.security}")
+            
+        print("=" * 70)
+
+# ═══════════════════════════════════════════════════════════
+# 📡 MAIN APPLICATION
 # ═══════════════════════════════════════════════════════════
 
 def main():
-    print("""
-╔══════════════════════════════════════════════════════════════╗
-║  📡  WiFi NETSCAN PRO - ULTIMATE NETWORK SCANNER  📡      ║
-║     Real WiFi Access + Professional UI                      ║
-╚══════════════════════════════════════════════════════════════╝
-    """)
-
-    section("BUILDING WiFi NETSCAN PRO")
-
-    write("index.html", build_index())
-    write("style.css", build_style())
-    write("storage.js", build_storage_js())
-    write("particles.js", build_particles_js())
-    write("visualizer.js", build_visualizer_js())
-    write("scanner.js", build_scanner_js())
-    write("filters.js", build_filters_js())
-    write("history.js", build_history_js())
-    write("settings.js", build_settings_js())
-    write("app.js", build_app_js())
-
-    print(f"""
-{'='*60}
-  ✅ BUILD COMPLETE! - {TOTAL_LINES} خط
-  📁 10 ملفات
-
-  🌐 Real Network Detection
-  📊 Signal Analysis
-  🔍 Smart Filters
-  📜 Scan History
-  ⚙️ Settings Panel
-  🔔 Sound Notifications
-
-  🚀 للتشغيل:
-     افتح index.html في المتصفح
-
-  📡 WiFi NETSCAN PRO READY!
-{'='*60}
-    """)
+    """Main application entry point"""
+    parser = argparse.ArgumentParser(description="WiFi NETSCAN PRO - Professional Network Scanner")
+    parser.add_argument('-i', '--interface', help='Network interface to scan')
+    parser.add_argument('-o', '--output', choices=['json', 'csv', 'txt', 'html', 'all'], 
+                       default='json', help='Output format')
+    parser.add_argument('-f', '--filename', help='Output filename')
+    parser.add_argument('-c', '--continuous', action='store_true', help='Continuous scanning mode')
+    parser.add_argument('-t', '--timeout', type=int, default=5, help='Scan timeout in seconds')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+    parser.add_argument('--no-color', action='store_true', help='Disable colored output')
+    parser.add_argument('--export-dir', default='scan_results', help='Export directory')
+    
+    args = parser.parse_args()
+    
+    # Initialize scanner
+    config = NetworkScannerConfig()
+    config.DEFAULT_TIMEOUT = args.timeout
+    
+    scanner = NetworkScanner(config)
+    exporter = ExportManager(scanner)
+    display = DisplayManager(scanner)
+    
+    # Print header
+    if RICH_AVAILABLE:
+        console = Console()
+        console.print(Panel.fit(
+            "[bold cyan]📡 WiFi NETSCAN PRO[/bold cyan]\n"
+            "[dim]Professional Network Scanner - Python Edition[/dim]",
+            border_style="cyan",
+            box=box.DOUBLE
+        ))
+    else:
+        print("""
+╔══════════════════════════════════════════════════════════╗
+║  📡 WiFi NETSCAN PRO - Professional Network Scanner  📡  ║
+║     Python Edition - Works Offline                      ║
+╚══════════════════════════════════════════════════════════╝
+        """)
+    
+    # Check capabilities
+    if args.verbose:
+        print("\n📋 Available Capabilities:")
+        for cap, available in scanner.capabilities.items():
+            status = "✅" if available else "❌"
+            print(f"  {status} {cap}")
+    
+    # Create export directory
+    if args.output != 'all' and not args.filename:
+        os.makedirs(args.export_dir, exist_ok=True)
+    
+    try:
+        if args.continuous:
+            # Continuous scanning mode
+            print("\n🔄 Continuous scanning mode - Press Ctrl+C to stop\n")
+            scan_count = 0
+            
+            while True:
+                scan_count += 1
+                print(f"\n📡 Scan #{scan_count} - {datetime.now().strftime('%H:%M:%S')}")
+                
+                networks = scanner.scan_networks(args.interface)
+                display.display_results(networks)
+                
+                print(f"\n✅ Found {len(networks)} networks")
+                
+                # Auto-export on each scan
+                if args.output != 'all':
+                    filename = args.filename or f"{args.export_dir}/scan_{scan_count}.{args.output}"
+                    if args.output == 'json':
+                        exporter.export_json(filename)
+                    elif args.output == 'csv':
+                        exporter.export_csv(filename)
+                    elif args.output == 'txt':
+                        exporter.export_txt(filename)
+                    elif args.output == 'html':
+                        exporter.export_html(filename)
+                    
+                    if args.verbose:
+                        print(f"💾 Exported to: {filename}")
+                
+                time.sleep(config.SCAN_INTERVAL)
+                
+        else:
+            # Single scan mode
+            print("\n🔍 Scanning for networks...\n")
+            
+            networks = scanner.scan_networks(args.interface)
+            display.display_results(networks)
+            
+            print(f"\n✅ Found {len(networks)} networks")
+            
+            # Export results
+            if args.output == 'all':
+                exports = exporter.export_all(args.filename or "scan_results")
+                print("\n💾 Exported to:")
+                for fmt, filename in exports.items():
+                    print(f"  • {fmt.upper()}: {filename}")
+            else:
+                filename = args.filename or f"{args.export_dir}/scan_results.{args.output}"
+                
+                if args.output == 'json':
+                    exporter.export_json(filename)
+                elif args.output == 'csv':
+                    exporter.export_csv(filename)
+                elif args.output == 'txt':
+                    exporter.export_txt(filename)
+                elif args.output == 'html':
+                    exporter.export_html(filename)
+                    
+                print(f"\n💾 Exported to: {filename}")
+                
+    except KeyboardInterrupt:
+        print("\n\n⏹️  Scan interrupted by user")
+        
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+            
+    finally:
+        print("\n" + "=" * 70)
+        print("  ✅ Scan complete - WiFi NETSCAN PRO")
+        print("=" * 70)
 
 if __name__ == "__main__":
     main()

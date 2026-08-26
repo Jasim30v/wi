@@ -26,7 +26,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
 .btn-action{padding:5px 12px;background:var(--card2);border:1px solid var(--border);color:var(--accent);cursor:pointer;border-radius:15px;font-size:9px;font-family:'Cairo',sans-serif;transition:all 0.3s}
 .btn-action:hover{border-color:var(--accent);box-shadow:0 0 20px rgba(0,255,136,0.2);transform:scale(1.05)}
 .btn-action.full{width:100%;padding:10px;margin-top:6px}
-.network-list{max-height:150px;overflow-y:auto;margin-top:6px;font-size:9px}
+.network-list{max-height:200px;overflow-y:auto;margin-top:6px;font-size:9px}
 .network-list .net-item{display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:0.3s;border-radius:4px}
 .network-list .net-item:hover{background:var(--glass);border-color:var(--accent)}
 .network-list .net-item .net-ssid{color:var(--text);font-weight:600}

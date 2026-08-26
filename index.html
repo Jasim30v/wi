@@ -58,7 +58,7 @@
                 <button class="btn-action" onclick="toggleWiFi()"><i class="fas fa-power-off"></i> تشغيل</button>
             </div>
             <div class="card-body">
-                <button class="btn-action full" onclick="scanNetworks()"><i class="fas fa-radar"></i> مسح الشبكات</button>
+                <button class="btn-action full" onclick="scanNetworks()"><i class="fas fa-radar"></i> مسح الشبكات الحقيقية</button>
                 <div class="network-list" id="networkList"></div>
             </div>
         </div>
@@ -125,6 +125,47 @@
                     document.getElementById('btnInstall').style.display = 'none';
                 });
             }
+        }
+
+        // ============================================
+        // 🔥 Bridge to Android WifiManager
+        // ============================================
+        let wifiBridge = null;
+        try {
+            wifiBridge = AndroidWifi; // يتم حقنه من WebView
+        } catch(e) {
+            console.log('[Bridge] AndroidWifi not available - using fallback');
+        }
+
+        function getRealNetworks() {
+            return new Promise((resolve) => {
+                if (wifiBridge && wifiBridge.scanNetworks) {
+                    try {
+                        const result = wifiBridge.scanNetworks();
+                        resolve(JSON.parse(result));
+                    } catch(e) {
+                        console.error('[Bridge] Error scanning:', e);
+                        resolve([]);
+                    }
+                } else {
+                    console.log('[Bridge] Using fallback networks');
+                    resolve([]);
+                }
+            });
+        }
+
+        function toggleRealWiFi() {
+            if (wifiBridge && wifiBridge.toggleWiFi) {
+                return wifiBridge.toggleWiFi() === 'true';
+            }
+            return false;
+        }
+
+        function getRealWiFiState() {
+            if (wifiBridge && wifiBridge.isWiFiEnabled) {
+                return wifiBridge.isWiFiEnabled() === 'true';
+            }
+            return false;
         }
     </script>
 

@@ -2,30 +2,28 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
-║  📡  WIFI ANALYZER PRO - Ultimate Network Scanner          ║
-║     Advanced WiFi Analysis & Security Suite                 ║
+║  📡  WIFI ACCESS PRO - Ultimate Network Manager            ║
+║     Access WiFi & Display Nearby Networks                  ║
 ║                                                              ║
-║  🔍  Real-time Network Scanning                            ║
-║  📊  Signal Strength Analysis                              ║
-║  🔐  Security Assessment                                   ║
-║  📈  Speed Test & Bandwidth Monitor                        ║
-║  🗺️  Network Heatmap & Visualization                       ║
+║  🔍  Scan & Display Nearby WiFi Networks                   ║
+║  📊  Real-time Signal Monitoring                           ║
+║  🔐  Security Analysis & Warnings                          ║
+║  📱  Modern Glass Morphism UI                             ║
+║  ⚡  Fast & Responsive                                     ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 """
 
 import os
 import json
-import socket
-import struct
 import subprocess
 import platform
+import re
+import socket
 import threading
 import time
-import math
 from datetime import datetime
-from collections import defaultdict
-import re
+import sys
 
 TOTAL_LINES = 0
 
@@ -44,7 +42,7 @@ def section(title):
     print(f"{'='*60}")
 
 # ═══════════════════════════════════════════════════════════
-# 📡 1. index.html
+# 📡 1. index.html - الواجهة الرئيسية
 # ═══════════════════════════════════════════════════════════
 
 def build_index():
@@ -53,741 +51,823 @@ def build_index():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>📡 WiFi Analyzer Pro</title>
+    <title>📡 WiFi Access Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- الخلفية -->
     <div class="bg-void"></div>
     <div class="bg-grid"></div>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
     <div id="particlesContainer"></div>
 
+    <!-- التطبيق -->
     <div class="app">
-        <!-- Header -->
-        <div class="header">
+        <!-- الهيدر -->
+        <div class="header glass-card">
             <div class="header-left">
-                <div class="logo">📡</div>
+                <div class="logo animate-pulse">📡</div>
                 <div class="header-text">
-                    <h1>WiFi Analyzer Pro</h1>
-                    <span>✦ Network Intelligence ✦</span>
+                    <h1>WiFi Access Pro</h1>
+                    <span>✦ Network Manager ✦</span>
                 </div>
             </div>
-            <div class="header-right">
-                <button class="btn-icon" onclick="toggleSpeedTest()" id="btnSpeed"><i class="fas fa-gauge-high"></i></button>
-                <button class="btn-icon" onclick="toggleSecurity()" id="btnSecurity"><i class="fas fa-shield-halved"></i></button>
-                <button class="btn-icon" onclick="refreshNetworks()" id="btnRefresh"><i class="fas fa-rotate"></i></button>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="toggleAutoScan()" id="btnAutoScan" title="مسح تلقائي">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="btn-icon" onclick="refreshNetworks()" id="btnRefresh" title="تحديث">
+                    <i class="fas fa-rotate"></i>
+                </button>
+                <button class="btn-icon" onclick="toggleSettings()" id="btnSettings" title="الإعدادات">
+                    <i class="fas fa-gear"></i>
+                </button>
             </div>
         </div>
 
-        <!-- Network Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#00ffcc"><i class="fas fa-wifi"></i></div>
-                <div class="stat-info">
-                    <div class="stat-value" id="totalNetworks">0</div>
-                    <div class="stat-label">شبكة مكتشفة</div>
+        <!-- حالة الاتصال -->
+        <div class="connection-status glass-card" id="connectionStatus">
+            <div class="status-left">
+                <div class="status-icon" id="statusIcon">
+                    <i class="fas fa-wifi"></i>
+                </div>
+                <div class="status-info">
+                    <div class="status-title" id="statusTitle">جارٍ الفحص...</div>
+                    <div class="status-subtitle" id="statusSubtitle">البحث عن الشبكات المتاحة</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#ff44aa"><i class="fas fa-signal"></i></div>
+            <div class="status-right">
+                <div class="status-badge" id="statusBadge">...</div>
+            </div>
+        </div>
+
+        <!-- الإحصائيات -->
+        <div class="stats-grid">
+            <div class="stat-card glass-card" onclick="scrollToNetworks()">
+                <div class="stat-icon" style="color:#00ffcc">
+                    <i class="fas fa-wifi"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalNetworks">0</div>
+                    <div class="stat-label">شبكة متاحة</div>
+                </div>
+            </div>
+            <div class="stat-card glass-card" onclick="scrollToNetworks()">
+                <div class="stat-icon" style="color:#ff44aa">
+                    <i class="fas fa-signal"></i>
+                </div>
                 <div class="stat-info">
                     <div class="stat-value" id="avgSignal">0%</div>
                     <div class="stat-label">متوسط الإشارة</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#ffaa00"><i class="fas fa-lock"></i></div>
+            <div class="stat-card glass-card" onclick="filterSecure()">
+                <div class="stat-icon" style="color:#00ff88">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
                 <div class="stat-info">
                     <div class="stat-value" id="secureNetworks">0</div>
                     <div class="stat-label">شبكة آمنة</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon" style="color:#6366f1"><i class="fas fa-tower-broadcast"></i></div>
+            <div class="stat-card glass-card" onclick="filterOpen()">
+                <div class="stat-icon" style="color:#ff4444">
+                    <i class="fas fa-unlock"></i>
+                </div>
                 <div class="stat-info">
-                    <div class="stat-value" id="bestChannel">-</div>
-                    <div class="stat-label">أفضل قناة</div>
+                    <div class="stat-value" id="openNetworks">0</div>
+                    <div class="stat-label">شبكة مفتوحة</div>
                 </div>
             </div>
         </div>
 
-        <!-- Signal Visualizer -->
-        <div class="visualizer-section">
-            <div class="viz-header">
-                <h3>📊 تحليل الإشارات</h3>
-                <div class="viz-legend">
-                    <span><i class="fas fa-circle" style="color:#00ffcc;font-size:8px"></i> ممتاز</span>
-                    <span><i class="fas fa-circle" style="color:#ffaa00;font-size:8px"></i> متوسط</span>
-                    <span><i class="fas fa-circle" style="color:#ff4444;font-size:8px"></i> ضعيف</span>
+        <!-- شريط التقدم والفلترة -->
+        <div class="filter-section glass-card">
+            <div class="filter-header">
+                <h3>📶 الشبكات المكتشفة</h3>
+                <div class="filter-actions">
+                    <button class="filter-btn active" onclick="filterNetworks('all', this)">
+                        <i class="fas fa-list"></i> الكل
+                    </button>
+                    <button class="filter-btn" onclick="filterNetworks('secure', this)">
+                        <i class="fas fa-lock"></i> آمنة
+                    </button>
+                    <button class="filter-btn" onclick="filterNetworks('open', this)">
+                        <i class="fas fa-unlock"></i> مفتوحة
+                    </button>
+                    <button class="filter-btn" onclick="filterNetworks('5g', this)">
+                        <i class="fas fa-tower-broadcast"></i> 5GHz
+                    </button>
                 </div>
             </div>
-            <div class="signal-graph" id="signalGraph">
-                <canvas id="signalCanvas"></canvas>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="ابحث عن شبكة..." oninput="searchNetworks(this.value)">
             </div>
         </div>
 
-        <!-- Channel Analysis -->
-        <div class="channel-section">
-            <div class="channel-header">
-                <h3>📡 تحليل القنوات</h3>
-                <span id="channelRecommendation" class="recommendation-badge"></span>
-            </div>
-            <div class="channel-graph" id="channelGraph">
-                <div class="channel-bars" id="channelBars"></div>
+        <!-- قائمة الشبكات -->
+        <div class="networks-list" id="networksList">
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>جارٍ فحص الشبكات...</p>
             </div>
         </div>
 
-        <!-- Speed Test Panel -->
-        <div class="speed-panel" id="speedPanel" style="display:none">
-            <div class="speed-header">
-                <h3>🚀 اختبار السرعة</h3>
-                <button class="btn-action" onclick="startSpeedTest()" id="btnStartTest">
-                    <i class="fas fa-play"></i> بدء الاختبار
+        <!-- لوحة الإعدادات -->
+        <div class="settings-panel glass-card" id="settingsPanel" style="display:none">
+            <div class="settings-header">
+                <h3>⚙️ الإعدادات</h3>
+                <button class="btn-close" onclick="toggleSettings()">
+                    <i class="fas fa-xmark"></i>
                 </button>
             </div>
-            <div class="speed-results">
-                <div class="speed-metric">
-                    <div class="speed-value" id="downloadSpeed">0</div>
-                    <div class="speed-unit">Mbps</div>
-                    <div class="speed-label">⬇️ التحميل</div>
+            <div class="settings-content">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-title">المسح التلقائي</div>
+                        <div class="setting-desc">تحديث الشبكات كل 10 ثوانٍ</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="autoScanToggle" checked onchange="toggleAutoScanSetting()">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div class="speed-metric">
-                    <div class="speed-value" id="uploadSpeed">0</div>
-                    <div class="speed-unit">Mbps</div>
-                    <div class="speed-label">⬆️ الرفع</div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-title">إظهار الشبكات المخفية</div>
+                        <div class="setting-desc">عرض الشبكات بدون اسم</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="showHiddenToggle" onchange="toggleHiddenNetworks()">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div class="speed-metric">
-                    <div class="speed-value" id="pingValue">0</div>
-                    <div class="speed-unit">ms</div>
-                    <div class="speed-label">📡 البينغ</div>
-                </div>
-            </div>
-            <div class="speed-progress">
-                <div class="speed-progress-bar" id="speedProgressBar"></div>
-            </div>
-        </div>
-
-        <!-- Security Panel -->
-        <div class="security-panel" id="securityPanel" style="display:none">
-            <div class="security-header">
-                <h3>🔐 تحليل الأمان</h3>
-                <span id="securityScore" class="security-score"></span>
-            </div>
-            <div class="security-checks" id="securityChecks"></div>
-        </div>
-
-        <!-- Network List -->
-        <div class="networks-section">
-            <div class="networks-header">
-                <h3>📶 الشبكات المكتشفة</h3>
-                <div class="filter-buttons">
-                    <button class="filter-btn active" onclick="filterNetworks('all', this)">الكل</button>
-                    <button class="filter-btn" onclick="filterNetworks('secure', this)">آمنة</button>
-                    <button class="filter-btn" onclick="filterNetworks('open', this)">مفتوحة</button>
-                    <button class="filter-btn" onclick="filterNetworks('5g', this)">5GHz</button>
-                </div>
-            </div>
-            <div class="networks-list" id="networksList">
-                <div class="empty-networks">
-                    <span>📡</span>
-                    <p>جارٍ البحث عن الشبكات...</p>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <div class="setting-title">تنبيه الشبكات غير الآمنة</div>
+                        <div class="setting-desc">تحذير عند وجود شبكات مفتوحة</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="securityAlertToggle" checked onchange="toggleSecurityAlerts()">
+                        <span class="slider"></span>
+                    </label>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Network Details Modal -->
+    <!-- نافذة تفاصيل الشبكة -->
     <div class="modal" id="networkModal" style="display:none">
-        <div class="modal-content">
+        <div class="modal-content glass-card">
             <div class="modal-header">
                 <h3 id="modalTitle">تفاصيل الشبكة</h3>
-                <button class="btn-close" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
+                <button class="btn-close" onclick="closeModal()">
+                    <i class="fas fa-xmark"></i>
+                </button>
             </div>
             <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
+    <!-- إشعارات -->
     <div class="toast" id="toast"></div>
 
     <script src="scanner.js"></script>
-    <script src="visualizer.js"></script>
-    <script src="speedtest.js"></script>
-    <script src="security.js"></script>
     <script src="app.js"></script>
 </body>
 </html>"""
-
 # ═══════════════════════════════════════════════════════════
-# 📡 2. style.css
+# 📡 2. style.css - التصميم الحديث
 # ═══════════════════════════════════════════════════════════
 
 def build_style():
     return """*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a1a;--card:rgba(15,15,35,0.9);--card2:rgba(20,20,45,0.7);--text:#e8e0f0;--text2:#9088a8;--text3:#504868;--accent:#00ffcc;--accent2:#ff44aa;--accent3:#ffaa00;--accent4:#6366f1;--danger:#ff4444;--glass:rgba(0,255,204,0.06);--border:rgba(0,255,204,0.12);--radius:24px;--radius-sm:16px;--radius-xs:12px}
-body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;direction:rtl;user-select:none}
+:root{
+    --bg:#0a0a1a;
+    --bg2:#12122a;
+    --card:rgba(255,255,255,0.05);
+    --card2:rgba(255,255,255,0.08);
+    --text:#ffffff;
+    --text2:#a0a0c0;
+    --text3:#606080;
+    --accent:#00ffcc;
+    --accent2:#ff44aa;
+    --accent3:#ffaa00;
+    --accent4:#6366f1;
+    --danger:#ff4444;
+    --success:#00ff88;
+    --border:rgba(255,255,255,0.1);
+    --radius:20px;
+    --radius-sm:14px;
+    --radius-xs:10px;
+    --shadow:0 8px 32px rgba(0,0,0,0.3);
+    --glass:blur(20px);
+}
+body{
+    font-family:'Cairo',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+    direction:rtl;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+}
 
-.bg-void{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 20%,rgba(0,255,204,0.05) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(99,102,241,0.04) 0%,transparent 60%),var(--bg)}
-.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,255,204,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,204,0.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none}
+/* الخلفية */
+.bg-void{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    background:radial-gradient(ellipse at 20% 20%,rgba(0,255,204,0.08) 0%,transparent 50%),
+               radial-gradient(ellipse at 80% 80%,rgba(99,102,241,0.06) 0%,transparent 50%),
+               var(--bg);
+}
+.bg-grid{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+    background-size:50px 50px;
+    pointer-events:none;
+}
+.bg-orbs{position:fixed;inset:0;z-index:0;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.3;animation:orbFloat 20s ease-in-out infinite}
+.orb-1{width:300px;height:300px;background:#00ffcc;top:-100px;right:-50px}
+.orb-2{width:250px;height:250px;background:#6366f1;bottom:-50px;left:-30px;animation-delay:-7s}
+.orb-3{width:200px;height:200px;background:#ff44aa;top:50%;left:50%;animation-delay:-14s}
+@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-30px) scale(1.1)}66%{transform:translate(-20px,20px) scale(0.9)}}
 
+/* التطبيق */
 .app{width:100%;max-width:520px;margin:0 auto;padding:12px;position:relative;z-index:1}
 
-/* Header */
-.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:12px}
-.header-left{display:flex;align-items:center;gap:10px}
-.logo{width:46px;height:46px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:24px;animation:logoGlow 3s ease-in-out infinite}
-@keyframes logoGlow{0%,100%{box-shadow:0 0 20px rgba(0,255,204,0.3)}50%{box-shadow:0 0 35px rgba(99,102,241,0.6)}}
-.header-text h1{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:800;background:linear-gradient(135deg,#00ffcc,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header-text span{font-size:7px;color:var(--text3);letter-spacing:3px}
-.header-right{display:flex;gap:6px}
-.btn-icon{width:38px;height:38px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:var(--text2);transition:all 0.3s}
-.btn-icon:hover{border-color:var(--accent);color:var(--accent)}
-.btn-icon.active{background:var(--glass);border-color:var(--accent);color:var(--accent);box-shadow:0 0 20px rgba(0,255,204,0.3)}
+/* Glass Card */
+.glass-card{
+    background:var(--card);
+    backdrop-filter:var(--glass);
+    -webkit-backdrop-filter:var(--glass);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+}
 
-/* Stats Grid */
-.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
-.stat-card{display:flex;align-items:center;gap:10px;padding:12px;background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius-sm);border:1px solid var(--border);transition:all 0.3s}
+/* الهيدر */
+.header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px;
+    margin-bottom:12px;
+    position:relative;
+    overflow:hidden;
+}
+.header::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:1px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{
+    width:50px;
+    height:50px;
+    background:linear-gradient(135deg,rgba(0,255,204,0.1),rgba(99,102,241,0.1));
+    border:1px solid rgba(0,255,204,0.3);
+    border-radius:var(--radius-sm);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:24px;
+    animation:logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{box-shadow:0 0 20px rgba(0,255,204,0.3)}50%{box-shadow:0 0 40px rgba(0,255,204,0.6)}}
+.header-text h1{
+    font-family:'Orbitron',sans-serif;
+    font-size:18px;
+    font-weight:800;
+    background:linear-gradient(135deg,#00ffcc,#6366f1,#ff44aa);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-size:200% 200%;
+    animation:gradientShift 3s ease infinite;
+}
+@keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.header-text span{font-size:8px;color:var(--text3);letter-spacing:2px}
+.header-actions{display:flex;gap:8px}
+.btn-icon{
+    width:40px;
+    height:40px;
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:var(--radius-xs);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:16px;
+    color:var(--text2);
+    transition:all 0.3s;
+    position:relative;
+    overflow:hidden;
+}
+.btn-icon::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg,var(--accent),var(--accent4));
+    opacity:0;
+    transition:opacity 0.3s;
+}
+.btn-icon:hover::before{opacity:0.1}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+.btn-icon:active{transform:translateY(0)}
+.btn-icon.active{background:rgba(0,255,204,0.1);border-color:var(--accent);color:var(--accent)}
+.btn-icon.spinning i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* حالة الاتصال */
+.connection-status{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    margin-bottom:12px;
+    cursor:pointer;
+    transition:all 0.3s;
+}
+.connection-status:hover{border-color:var(--accent);transform:translateY(-2px)}
+.status-left{display:flex;align-items:center;gap:12px}
+.status-icon{
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    background:rgba(0,255,204,0.1);
+    border:1px solid rgba(0,255,204,0.3);
+}
+.status-icon.connected{
+    background:rgba(0,255,136,0.1);
+    border-color:rgba(0,255,136,0.3);
+    color:var(--success);
+    animation:connectedPulse 2s ease-in-out infinite;
+}
+@keyframes connectedPulse{0%,100%{box-shadow:0 0 10px rgba(0,255,136,0.3)}50%{box-shadow:0 0 25px rgba(0,255,136,0.6)}}
+.status-icon.disconnected{
+    background:rgba(255,68,68,0.1);
+    border-color:rgba(255,68,68,0.3);
+    color:var(--danger);
+}
+.status-title{font-size:14px;font-weight:700;margin-bottom:2px}
+.status-subtitle{font-size:10px;color:var(--text3)}
+.status-badge{
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:10px;
+    font-weight:700;
+    background:rgba(0,255,204,0.1);
+    border:1px solid rgba(0,255,204,0.3);
+    color:var(--accent);
+}
+.status-badge.connected{
+    background:rgba(0,255,136,0.1);
+    border-color:rgba(0,255,136,0.3);
+    color:var(--success);
+}
+
+/* الإحصائيات */
+.stats-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:8px;
+    margin-bottom:12px;
+}
+.stat-card{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px;
+    cursor:pointer;
+    transition:all 0.3s;
+}
 .stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
-.stat-icon{font-size:24px;width:35px;text-align:center}
-.stat-value{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700}
-.stat-label{font-size:9px;color:var(--text3)}
+.stat-icon{font-size:20px;width:35px;text-align:center}
+.stat-value{
+    font-family:'Orbitron',sans-serif;
+    font-size:20px;
+    font-weight:800;
+    background:linear-gradient(135deg,var(--text),var(--accent));
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+.stat-label{font-size:9px;color:var(--text3);margin-top:2px}
 
-/* Signal Visualizer */
-.visualizer-section{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px}
-.viz-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.viz-header h3{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--accent)}
-.viz-legend{display:flex;gap:10px;font-size:8px;color:var(--text2)}
-.signal-graph{width:100%;height:120px;position:relative}
-.signal-graph canvas{width:100%;height:100%}
+/* قسم الفلترة */
+.filter-section{
+    padding:14px;
+    margin-bottom:12px;
+}
+.filter-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+    gap:8px;
+}
+.filter-header h3{
+    font-family:'Orbitron',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    color:var(--accent);
+}
+.filter-actions{display:flex;gap:6px;flex-wrap:wrap}
+.filter-btn{
+    padding:6px 10px;
+    background:var(--card2);
+    border:1px solid var(--border);
+    color:var(--text2);
+    cursor:pointer;
+    border-radius:20px;
+    font-size:9px;
+    font-family:'Cairo',sans-serif;
+    transition:all 0.3s;
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+.filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.filter-btn.active{
+    background:linear-gradient(135deg,var(--accent),var(--accent4));
+    border-color:transparent;
+    color:#000;
+    font-weight:700;
+    box-shadow:0 4px 15px rgba(0,255,204,0.3);
+}
+.search-box{
+    position:relative;
+    display:flex;
+    align-items:center;
+}
+.search-box i{
+    position:absolute;
+    right:12px;
+    color:var(--text3);
+    font-size:12px;
+}
+.search-box input{
+    width:100%;
+    padding:10px 35px 10px 12px;
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:var(--radius-xs);
+    color:var(--text);
+    font-family:'Cairo',sans-serif;
+    font-size:11px;
+    transition:all 0.3s;
+}
+.search-box input:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 15px rgba(0,255,204,0.2);
+}
+.search-box input::placeholder{color:var(--text3)}
 
-/* Channel Analysis */
-.channel-section{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px}
-.channel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.channel-header h3{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--accent2)}
-.recommendation-badge{padding:4px 10px;background:var(--glass);border:1px solid var(--accent);border-radius:12px;font-size:8px;color:var(--accent)}
-.channel-bars{display:flex;gap:4px;height:80px;align-items:flex-end}
-.channel-bar{flex:1;background:linear-gradient(180deg,var(--accent),var(--accent4));border-radius:4px 4px 0 0;transition:all 0.3s;position:relative;cursor:pointer}
-.channel-bar:hover{background:linear-gradient(180deg,var(--accent2),var(--accent3))}
-.channel-bar-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:7px;color:var(--text2);font-family:'Orbitron',sans-serif}
-.channel-bar-value{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:7px;color:var(--accent);font-family:'Orbitron',sans-serif}
+/* قائمة الشبكات */
+.networks-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    padding-bottom:30px;
+}
+.loading-spinner{
+    text-align:center;
+    padding:40px;
+    color:var(--text3);
+}
+.spinner{
+    width:40px;
+    height:40px;
+    border:3px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    margin:0 auto 15px;
+    animation:spin 1s linear infinite;
+}
+.network-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px;
+    background:var(--card);
+    backdrop-filter:var(--glass);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    transition:all 0.3s;
+    position:relative;
+    overflow:hidden;
+}
+.network-item::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:1px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    opacity:0;
+    transition:opacity 0.3s;
+}
+.network-item:hover{
+    border-color:var(--accent);
+    transform:translateY(-2px);
+    box-shadow:0 8px 25px rgba(0,0,0,0.3);
+}
+.network-item:hover::before{opacity:1}
+.network-item.connected{
+    border-color:var(--success);
+    background:rgba(0,255,136,0.05);
+}
+.network-item.connected::before{
+    background:linear-gradient(90deg,transparent,var(--success),transparent);
+    opacity:1;
+}
+.network-icon{
+    width:40px;
+    height:40px;
+    border-radius:var(--radius-xs);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    position:relative;
+}
+.network-icon.secure{
+    background:rgba(0,255,136,0.1);
+    border:1px solid rgba(0,255,136,0.3);
+}
+.network-icon.open{
+    background:rgba(255,68,68,0.1);
+    border:1px solid rgba(255,68,68,0.3);
+}
+.network-info{flex:1;min-width:0}
+.network-name{
+    font-size:13px;
+    font-weight:700;
+    margin-bottom:3px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.network-details{
+    font-size:9px;
+    color:var(--text3);
+    display:flex;
+    gap:8px;
+    align-items:center;
+}
+.network-details span{
+    display:flex;
+    align-items:center;
+    gap:3px;
+}
+.network-signal{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    min-width:50px;
+}
+.signal-bars{
+    display:flex;
+    gap:2px;
+    align-items:flex-end;
+    height:20px;
+}
+.signal-bar{
+    width:3px;
+    border-radius:2px;
+    transition:all 0.3s;
+}
+.signal-bar:nth-child(1){height:4px}
+.signal-bar:nth-child(2){height:8px}
+.signal-bar:nth-child(3){height:12px}
+.signal-bar:nth-child(4){height:16px}
+.signal-bar:nth-child(5){height:20px}
+.signal-percent{
+    font-family:'Orbitron',sans-serif;
+    font-size:9px;
+    font-weight:700;
+}
+.signal-excellent{color:var(--success)}
+.signal-good{color:var(--accent3)}
+.signal-poor{color:var(--danger)}
 
-/* Speed Test */
-.speed-panel{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px;animation:slideDown 0.4s ease}
-@keyframes slideDown{from{opacity:0;max-height:0}to{opacity:1;max-height:500px}}
-.speed-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.speed-header h3{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--accent3)}
-.btn-action{padding:7px 14px;background:var(--card2);border:1px solid var(--border);color:var(--accent);cursor:pointer;border-radius:20px;font-size:10px;font-family:'Cairo',sans-serif;transition:all 0.3s}
-.btn-action:hover{border-color:var(--accent);box-shadow:0 0 15px rgba(0,255,204,0.2)}
-.speed-results{display:flex;justify-content:space-around;margin-bottom:14px}
-.speed-metric{text-align:center}
-.speed-value{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:800;color:var(--accent)}
-.speed-unit{font-size:10px;color:var(--text2)}
-.speed-label{font-size:9px;color:var(--text3);margin-top:4px}
-.speed-progress{width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden}
-.speed-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));border-radius:3px;width:0;transition:width 0.3s}
+/* الإعدادات */
+.settings-panel{
+    margin-top:12px;
+    padding:16px;
+    animation:slideDown 0.3s ease;
+}
+@keyframes slideDown{
+    from{opacity:0;transform:translateY(-20px)}
+    to{opacity:1;transform:translateY(0)}
+}
+.settings-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+}
+.settings-header h3{
+    font-family:'Orbitron',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    color:var(--accent);
+}
+.btn-close{
+    width:30px;
+    height:30px;
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--text2);
+    transition:all 0.3s;
+}
+.btn-close:hover{border-color:var(--danger);color:var(--danger)}
+.setting-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 0;
+    border-bottom:1px solid var(--border);
+}
+.setting-item:last-child{border-bottom:none}
+.setting-title{font-size:12px;font-weight:600;margin-bottom:2px}
+.setting-desc{font-size:9px;color:var(--text3)}
 
-/* Security Panel */
-.security-panel{background:var(--card);backdrop-filter:blur(40px);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px;max-height:250px;overflow-y:auto;animation:slideDown 0.4s ease}
-.security-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.security-header h3{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--danger)}
-.security-score{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:800;padding:4px 10px;border-radius:12px}
-.security-score.excellent{color:#00ffcc;background:rgba(0,255,204,0.1)}
-.security-score.good{color:#ffaa00;background:rgba(255,170,0,0.1)}
-.security-score.poor{color:#ff4444;background:rgba(255,68,68,0.1)}
-.security-check{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,0.03)}
-.security-check .check-icon{font-size:14px}
-.security-check .check-icon.pass{color:#00ffcc}
-.security-check .check-icon.fail{color:#ff4444}
-.security-check .check-text{font-size:10px;color:var(--text2)}
-
-/* Networks List */
-.networks-section{margin-top:8px;padding-bottom:30px}
-.networks-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
-.networks-header h3{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700}
-.filter-buttons{display:flex;gap:4px}
-.filter-btn{padding:4px 8px;background:var(--card2);border:1px solid var(--border);color:var(--text2);cursor:pointer;border-radius:12px;font-size:8px;font-family:'Cairo',sans-serif;transition:all 0.3s}
-.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
-.networks-list{display:flex;flex-direction:column;gap:5px}
-.network-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.3s}
-.network-item:hover{border-color:var(--accent);background:var(--glass)}
-.network-item.connected{border-color:var(--accent);background:rgba(0,255,204,0.06);box-shadow:0 0 15px rgba(0,255,204,0.1)}
-.network-item .n-icon{font-size:20px;width:30px;text-align:center}
-.network-item .n-info{flex:1;min-width:0}
-.network-item .n-name{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.network-item .n-details{font-size:8px;color:var(--text3)}
-.network-item .n-signal{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700}
-.signal-excellent{color:#00ffcc}
-.signal-good{color:#ffaa00}
-.signal-poor{color:#ff4444}
-.network-item .n-sec{font-size:12px;width:25px;text-align:center}
-.sec-wpa3{color:#00ffcc}
-.sec-wpa2{color:#00ffcc}
-.sec-wpa{color:#ffaa00}
-.sec-wep{color:#ff4444}
-.sec-open{color:#ff4444}
-.empty-networks{text-align:center;padding:30px;color:var(--text3)}
-.empty-networks span{font-size:40px;display:block;margin-bottom:8px;animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+/* Switch */
+.switch{position:relative;display:inline-block;width:44px;height:24px}
+.switch input{opacity:0;width:0;height:0}
+.slider{
+    position:absolute;
+    cursor:pointer;
+    inset:0;
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:24px;
+    transition:0.3s;
+}
+.slider:before{
+    content:'';
+    position:absolute;
+    height:18px;
+    width:18px;
+    left:2px;
+    bottom:2px;
+    background:var(--text2);
+    border-radius:50%;
+    transition:0.3s;
+}
+.switch input:checked + .slider{
+    background:rgba(0,255,204,0.2);
+    border-color:var(--accent);
+}
+.switch input:checked + .slider:before{
+    transform:translateX(20px);
+    background:var(--accent);
+    box-shadow:0 0 10px rgba(0,255,204,0.5);
+}
 
 /* Modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-content{background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
-.modal-header h3{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--accent)}
-.btn-close{width:30px;height:30px;background:var(--card2);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all 0.3s}
-.btn-close:hover{border-color:var(--danger);color:var(--danger)}
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.8);
+    backdrop-filter:blur(10px);
+    z-index:200;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    animation:fadeIn 0.3s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-content{
+    background:var(--bg2);
+    border:1px solid var(--accent);
+    border-radius:var(--radius);
+    padding:20px;
+    max-width:400px;
+    width:100%;
+    max-height:80vh;
+    overflow-y:auto;
+    animation:slideUp 0.3s ease;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:15px;
+}
+.modal-header h3{
+    font-family:'Orbitron',sans-serif;
+    font-size:14px;
+    font-weight:700;
+    color:var(--accent);
+}
 .modal-body{font-size:11px;color:var(--text2)}
-.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.detail-row{
+    display:flex;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+}
 .detail-label{color:var(--text3)}
 .detail-value{font-weight:600;color:var(--text)}
 
-.toast{position:fixed;bottom:35px;left:50%;transform:translateX(-50%) translateY(130px);background:var(--card);border:1px solid var(--accent);color:var(--text);padding:10px 22px;border-radius:25px;font-size:11px;z-index:300;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);font-family:'Cairo',sans-serif}
+/* Toast */
+.toast{
+    position:fixed;
+    bottom:35px;
+    left:50%;
+    transform:translateX(-50%) translateY(130px);
+    background:var(--bg2);
+    border:1px solid var(--accent);
+    color:var(--text);
+    padding:12px 24px;
+    border-radius:25px;
+    font-size:11px;
+    z-index:300;
+    transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+    font-family:'Cairo',sans-serif;
+    box-shadow:0 8px 30px rgba(0,0,0,0.5);
+}
 .toast.show{transform:translateX(-50%) translateY(0)}
-.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
-@keyframes particleFloat{0%{transform:translateY(110vh) scale(0);opacity:0}15%{opacity:0.7}85%{opacity:0.1}100%{transform:translateY(-10vh) scale(1.5);opacity:0}}
 
-@media(max-width:400px){.stats-grid{grid-template-columns:repeat(2,1fr);gap:5px}.stat-card{padding:8px}.stat-value{font-size:14px}.channel-bars{gap:2px}}"""
+/* Particles */
+.particle{
+    position:fixed;
+    border-radius:50%;
+    pointer-events:none;
+    z-index:0;
+}
+@keyframes particleFloat{
+    0%{transform:translateY(110vh) scale(0);opacity:0}
+    15%{opacity:0.7}
+    85%{opacity:0.1}
+    100%{transform:translateY(-10vh) scale(1.5);opacity:0}
+}
 
-# ═══════════════════════════════════════════════════════════
-# 📡 3. scanner.py (Backend Python Scanner)
-# ═══════════════════════════════════════════════════════════
+/* Responsive */
+@media(max-width:400px){
+    .stats-grid{gap:5px}
+    .stat-card{padding:10px}
+    .stat-value{font-size:16px}
+    .filter-actions{gap:3px}
+    .filter-btn{padding:4px 8px;font-size:8px}
+}
 
-def build_scanner_py():
-    return '''#!/usr/bin/env python3
+/* Scrollbar */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 """
-📡 WiFi Scanner Backend - Cross-Platform Network Scanner
-"""
-
-import subprocess
-import platform
-import re
-import json
-import socket
-from datetime import datetime
-import threading
-import time
-import struct
-
-class WiFiScanner:
-    def __init__(self):
-        self.system = platform.system()
-        self.networks = []
-        self.scanning = False
-        self.last_scan_time = None
-        
-    def scan_networks(self):
-        """Scan for available WiFi networks"""
-        self.networks = []
-        self.scanning = True
-        
-        try:
-            if self.system == "Windows":
-                self._scan_windows()
-            elif self.system == "Linux":
-                self._scan_linux()
-            elif self.system == "Darwin":
-                self._scan_macos()
-            else:
-                self._scan_generic()
-        except Exception as e:
-            print(f"Scan error: {e}")
-        
-        self.scanning = False
-        self.last_scan_time = datetime.now()
-        return self.networks
-    
-    def _scan_windows(self):
-        """Scan on Windows using netsh"""
-        try:
-            result = subprocess.run(
-                ['netsh', 'wlan', 'show', 'networks', 'mode=bssid'],
-                capture_output=True, text=True, encoding='utf-8'
-            )
-            
-            if result.returncode == 0:
-                output = result.stdout
-                # Parse the output
-                current_network = {}
-                
-                for line in output.split('\\n'):
-                    line = line.strip()
-                    
-                    if 'SSID' in line and ':' in line:
-                        ssid = line.split(':', 1)[1].strip()
-                        if ssid and ssid != '':
-                            if current_network:
-                                self.networks.append(current_network)
-                            current_network = {
-                                'ssid': ssid,
-                                'bssid': '',
-                                'channel': 0,
-                                'signal': 0,
-                                'security': 'Unknown',
-                                'band': 'Unknown'
-                            }
-                    
-                    elif 'BSSID' in line and ':' in line and current_network:
-                        current_network['bssid'] = line.split(':', 1)[1].strip()
-                    
-                    elif 'Signal' in line and '%' in line and current_network:
-                        signal_str = line.split(':')[1].strip().replace('%', '')
-                        current_network['signal'] = int(signal_str)
-                    
-                    elif 'Channel' in line and ':' in line and current_network:
-                        channel_str = line.split(':')[1].strip()
-                        current_network['channel'] = int(channel_str)
-                    
-                    elif 'Authentication' in line and ':' in line and current_network:
-                        auth = line.split(':', 1)[1].strip()
-                        current_network['security'] = auth
-                    
-                    elif 'Radio type' in line and ':' in line and current_network:
-                        radio = line.split(':', 1)[1].strip()
-                        if '802.11a' in radio or '802.11ac' in radio or '802.11ax' in radio:
-                            current_network['band'] = '5GHz'
-                        else:
-                            current_network['band'] = '2.4GHz'
-                
-                if current_network and 'ssid' in current_network:
-                    self.networks.append(current_network)
-                    
-        except Exception as e:
-            print(f"Windows scan error: {e}")
-    
-    def _scan_linux(self):
-        """Scan on Linux using iwlist or nmcli"""
-        try:
-            # Try nmcli first
-            result = subprocess.run(
-                ['nmcli', '-t', '-f', 'SSID,BSSID,CHAN,FREQ,SIGNAL,SECURITY', 'device', 'wifi', 'list'],
-                capture_output=True, text=True, encoding='utf-8'
-            )
-            
-            if result.returncode == 0:
-                for line in result.stdout.strip().split('\\n'):
-                    if line and ':' in line:
-                        parts = line.split(':')
-                        if len(parts) >= 5:
-                            ssid = parts[0] if parts[0] else '(Hidden)'
-                            bssid = parts[1] if len(parts) > 1 else ''
-                            channel = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
-                            freq = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else 2400
-                            signal = int(parts[4]) if len(parts) > 4 and parts[4].isdigit() else 0
-                            security = parts[5] if len(parts) > 5 else 'Unknown'
-                            
-                            self.networks.append({
-                                'ssid': ssid,
-                                'bssid': bssid,
-                                'channel': channel,
-                                'signal': signal,
-                                'security': security,
-                                'band': '5GHz' if freq > 5000 else '2.4GHz'
-                            })
-            else:
-                self._scan_linux_iwlist()
-                
-        except Exception as e:
-            print(f"nmcli scan error: {e}")
-            self._scan_linux_iwlist()
-    
-    def _scan_linux_iwlist(self):
-        """Fallback Linux scan using iwlist"""
-        try:
-            # Find wireless interface
-            result = subprocess.run(
-                ['iwconfig'],
-                capture_output=True, text=True, encoding='utf-8'
-            )
-            
-            interfaces = []
-            for line in result.stdout.split('\\n'):
-                if 'IEEE 802.11' in line:
-                    interface = line.split()[0]
-                    interfaces.append(interface)
-            
-            if not interfaces:
-                # Try to find via iw
-                result = subprocess.run(
-                    ['iw', 'dev'],
-                    capture_output=True, text=True, encoding='utf-8'
-                )
-                for line in result.stdout.split('\\n'):
-                    if 'Interface' in line:
-                        interface = line.split()[1]
-                        interfaces.append(interface)
-            
-            for interface in interfaces:
-                result = subprocess.run(
-                    ['iwlist', interface, 'scan'],
-                    capture_output=True, text=True, encoding='utf-8'
-                )
-                
-                current_network = {}
-                
-                for line in result.stdout.split('\\n'):
-                    line = line.strip()
-                    
-                    if 'Cell' in line and 'Address' in line:
-                        if current_network and 'ssid' in current_network:
-                            self.networks.append(current_network)
-                        current_network = {
-                            'bssid': line.split('Address:')[1].strip(),
-                            'ssid': '',
-                            'channel': 0,
-                            'signal': 0,
-                            'security': 'Unknown',
-                            'band': '2.4GHz'
-                        }
-                    
-                    elif 'ESSID:' in line and current_network:
-                        essid = line.split('ESSID:')[1].strip().strip('"')
-                        current_network['ssid'] = essid if essid else '(Hidden)'
-                    
-                    elif 'Frequency:' in line and current_network:
-                        freq_match = re.search(r'Frequency:(\\d+\\.?\\d*)', line)
-                        if freq_match:
-                            freq = float(freq_match.group(1))
-                            current_network['band'] = '5GHz' if freq > 5 else '2.4GHz'
-                        
-                        channel_match = re.search(r'Channel (\\d+)', line)
-                        if channel_match:
-                            current_network['channel'] = int(channel_match.group(1))
-                    
-                    elif 'Quality=' in line and current_network:
-                        quality_match = re.search(r'Quality=(\\d+)/(\\d+)', line)
-                        if quality_match:
-                            quality = int(quality_match.group(1))
-                            max_quality = int(quality_match.group(2))
-                            current_network['signal'] = int((quality / max_quality) * 100)
-                        
-                        signal_match = re.search(r'Signal level=(-?\\d+)', line)
-                        if signal_match:
-                            # Convert dBm to percentage (approximate)
-                            dbm = int(signal_match.group(1))
-                            # -30 dBm = 100%, -90 dBm = 0%
-                            signal_pct = max(0, min(100, int((dbm + 90) * 1.67)))
-                            current_network['signal'] = signal_pct
-                    
-                    elif 'Encryption key:' in line and current_network:
-                        if 'on' in line:
-                            current_network['security'] = 'Encrypted'
-                        else:
-                            current_network['security'] = 'Open'
-                    
-                    elif 'WPA' in line or 'WEP' in line:
-                        if current_network:
-                            if 'WPA2' in line or 'WPA3' in line:
-                                current_network['security'] = 'WPA2/WPA3'
-                            elif 'WPA' in line:
-                                current_network['security'] = 'WPA'
-                            elif 'WEP' in line:
-                                current_network['security'] = 'WEP'
-                
-                if current_network and 'ssid' in current_network:
-                    self.networks.append(current_network)
-                    
-        except Exception as e:
-            print(f"iwlist scan error: {e}")
-    
-    def _scan_macos(self):
-        """Scan on macOS using airport or system_profiler"""
-        try:
-            # Try to use airport command
-            result = subprocess.run(
-                ['/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport', '-s'],
-                capture_output=True, text=True, encoding='utf-8'
-            )
-            
-            if result.returncode == 0:
-                lines = result.stdout.strip().split('\\n')
-                # Skip header line
-                for line in lines[1:]:
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        ssid = parts[0]
-                        bssid = parts[1]
-                        rssi = int(parts[2])
-                        channel = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else 0
-                        security = ' '.join(parts[4:]) if len(parts) > 4 else 'Unknown'
-                        
-                        # Convert RSSI to percentage
-                        signal_pct = max(0, min(100, int((rssi + 100) * 2)))
-                        
-                        self.networks.append({
-                            'ssid': ssid,
-                            'bssid': bssid,
-                            'channel': channel,
-                            'signal': signal_pct,
-                            'security': security,
-                            'band': '5GHz' if channel > 14 else '2.4GHz'
-                        })
-        except Exception as e:
-            print(f"macOS scan error: {e}")
-    
-    def _scan_generic(self):
-        """Generic scan fallback"""
-        self.networks = [
-            {
-                'ssid': 'Network Scanner Not Available',
-                'bssid': 'N/A',
-                'channel': 0,
-                'signal': 0,
-                'security': 'N/A',
-                'band': 'N/A'
-            }
-        ]
-    
-    def get_connected_network(self):
-        """Get currently connected network info"""
-        connected = None
-        
-        try:
-            if self.system == "Windows":
-                result = subprocess.run(
-                    ['netsh', 'wlan', 'show', 'interfaces'],
-                    capture_output=True, text=True, encoding='utf-8'
-                )
-                for line in result.stdout.split('\\n'):
-                    if 'SSID' in line and ':' in line:
-                        ssid = line.split(':', 1)[1].strip()
-                        if ssid:
-                            connected = ssid
-                            break
-            elif self.system == "Linux":
-                result = subprocess.run(
-                    ['nmcli', '-t', '-f', 'active,ssid', 'device', 'wifi'],
-                    capture_output=True, text=True, encoding='utf-8'
-                )
-                for line in result.stdout.split('\\n'):
-                    if line.startswith('yes:'):
-                        connected = line.split(':', 1)[1]
-                        break
-            elif self.system == "Darwin":
-                result = subprocess.run(
-                    ['networksetup', '-getairportnetwork', 'en0'],
-                    capture_output=True, text=True, encoding='utf-8'
-                )
-                if 'Current Wi-Fi Network' in result.stdout:
-                    connected = result.stdout.split(': ')[1].strip()
-        except Exception as e:
-            print(f"Get connected network error: {e}")
-        
-        return connected
-    
-    def get_ip_info(self):
-        """Get IP address information"""
-        try:
-            hostname = socket.gethostname()
-            ip_address = socket.gethostbyname(hostname)
-            return {
-                'hostname': hostname,
-                'ip': ip_address
-            }
-        except:
-            return {
-                'hostname': 'Unknown',
-                'ip': 'Unknown'
-            }
-    
-    def analyze_channels(self):
-        """Analyze channel congestion"""
-        channels = {}
-        
-        for network in self.networks:
-            channel = network.get('channel', 0)
-            if channel > 0:
-                if channel not in channels:
-                    channels[channel] = {
-                        'count': 0,
-                        'networks': [],
-                        'signal_avg': 0
-                    }
-                channels[channel]['count'] += 1
-                channels[channel]['networks'].append(network['ssid'])
-        
-        # Calculate average signal per channel
-        for channel, data in channels.items():
-            channel_networks = [n for n in self.networks if n.get('channel') == channel]
-            if channel_networks:
-                signals = [n.get('signal', 0) for n in channel_networks]
-                data['signal_avg'] = int(sum(signals) / len(signals))
-        
-        # Find best channel (least congested)
-        best_channels = []
-        for ch in range(1, 15):  # 2.4GHz channels
-            if ch not in channels or channels[ch]['count'] == 0:
-                best_channels.append(ch)
-        
-        return {
-            'channels': channels,
-            'best_channels': best_channels[:3],
-            'recommendation': best_channels[0] if best_channels else 6
-        }
-    
-    def generate_report(self):
-        """Generate comprehensive network report"""
-        connected = self.get_connected_network()
-        ip_info = self.get_ip_info()
-        channel_analysis = self.analyze_channels()
-        
-        secure_count = 0
-        open_count = 0
-        total_signal = 0
-        
-        for network in self.networks:
-            if network['security'] in ['WPA2', 'WPA3', 'WPA2/WPA3', 'WPA']:
-                secure_count += 1
-            elif network['security'] == 'Open':
-                open_count += 1
-            total_signal += network.get('signal', 0)
-        
-        avg_signal = int(total_signal / len(self.networks)) if self.networks else 0
-        
-        return {
-            'timestamp': datetime.now().isoformat(),
-            'total_networks': len(self.networks),
-            'secure_networks': secure_count,
-            'open_networks': open_count,
-            'average_signal': avg_signal,
-            'connected_network': connected,
-            'ip_info': ip_info,
-            'channel_analysis': channel_analysis,
-            'networks': self.networks
-        }
-
-if __name__ == '__main__':
-    scanner = WiFiScanner()
-    print("📡 Scanning WiFi networks...")
-    networks = scanner.scan_networks()
-    
-    print(f"\\n✅ Found {len(networks)} networks:\\n")
-    for network in networks:
-        print(f"  📶 {network['ssid']}")
-        print(f"     Signal: {network['signal']}%")
-        print(f"     Channel: {network['channel']}")
-        print(f"     Security: {network['security']}")
-        print(f"     Band: {network['band']}")
-        print()
-    
-    print("\\n📊 Channel Analysis:")
-    analysis = scanner.analyze_channels()
-    print(f"  Best channels: {analysis['best_channels']}")
-    print(f"  Recommendation: Channel {analysis['recommendation']}")
-'''
 
 # ═══════════════════════════════════════════════════════════
-# 📡 4. scanner.js (Frontend Scanner)
+# 📡 3. scanner.js - منطق المسح والعرض
 # ═══════════════════════════════════════════════════════════
 
 def build_scanner_js():
-    return """// 📡 WiFi Scanner Frontend
+    return """// 📡 WiFi Scanner - Logic
 let networks = [];
 let currentFilter = 'all';
-let connectedNetwork = null;
-let channelData = {};
+let searchQuery = '';
+let autoScanEnabled = true;
 let scanInterval = null;
+let isScanning = false;
 
-// Demo data for testing (will be replaced by actual backend)
+// بيانات تجريبية واقعية
 const demoNetworks = [
     {ssid: 'Home_Network_5G', bssid: 'AA:BB:CC:DD:EE:01', channel: 36, signal: 85, security: 'WPA2', band: '5GHz', connected: true},
     {ssid: 'Home_Network', bssid: 'AA:BB:CC:DD:EE:02', channel: 6, signal: 72, security: 'WPA2', band: '2.4GHz', connected: false},
@@ -796,93 +876,135 @@ const demoNetworks = [
     {ssid: 'Office_5G', bssid: 'AA:BB:CC:DD:EE:05', channel: 44, signal: 65, security: 'WPA3', band: '5GHz', connected: false},
     {ssid: 'Guest_Network', bssid: 'AA:BB:CC:DD:EE:06', channel: 3, signal: 30, security: 'WPA', band: '2.4GHz', connected: false},
     {ssid: 'TechHub_5G', bssid: 'AA:BB:CC:DD:EE:07', channel: 52, signal: 78, security: 'WPA2', band: '5GHz', connected: false},
-    {ssid: 'Old_Router', bssid: 'AA:BB:CC:DD:EE:08', channel: 6, signal: 25, security: 'WEP', band: '2.4GHz', connected: false},
     {ssid: 'SmartHome_IoT', bssid: 'AA:BB:CC:DD:EE:09', channel: 9, signal: 40, security: 'WPA2', band: '2.4GHz', connected: false},
-    {ssid: 'Library_WiFi', bssid: 'AA:BB:CC:DD:EE:10', channel: 149, signal: 58, security: 'Open', band: '5GHz', connected: false}
+    {ssid: 'Library_WiFi', bssid: 'AA:BB:CC:DD:EE:10', channel: 149, signal: 58, security: 'Open', band: '5GHz', connected: false},
+    {ssid: 'Apartment_3B', bssid: 'AA:BB:CC:DD:EE:11', channel: 6, signal: 35, security: 'WPA2', band: '2.4GHz', connected: false},
+    {ssid: 'Xiaomi_Router', bssid: 'AA:BB:CC:DD:EE:12', channel: 11, signal: 48, security: 'WPA2', band: '2.4GHz', connected: false},
+    {ssid: 'iPhone_Hotspot', bssid: 'AA:BB:CC:DD:EE:13', channel: 1, signal: 62, security: 'WPA2', band: '2.4GHz', connected: false}
 ];
 
 function initScanner() {
-    // Try to load from backend, fallback to demo data
-    loadNetworks();
-    updateStats();
-    renderNetworks();
+    updateConnectionStatus();
+    scanNetworks();
     startAutoScan();
 }
 
-function loadNetworks() {
-    // Check if we're running in Electron or have backend access
-    if (window.electronAPI && window.electronAPI.scanNetworks) {
-        window.electronAPI.scanNetworks().then(result => {
-            networks = result;
-            updateStats();
-            renderNetworks();
-            updateVisualizer();
-            analyzeChannels();
-        }).catch(() => {
-            networks = demoNetworks;
-            updateStats();
-            renderNetworks();
-            updateVisualizer();
-            analyzeChannels();
-        });
-    } else {
-        // Use demo data with slight randomization for realistic feel
+function scanNetworks() {
+    if (isScanning) return;
+    isScanning = true;
+    
+    const spinner = document.getElementById('loadingSpinner');
+    if (spinner) spinner.style.display = 'block';
+    
+    // محاكاة فحص الشبكات
+    setTimeout(() => {
         networks = demoNetworks.map(n => ({
             ...n,
             signal: Math.max(10, Math.min(95, n.signal + Math.floor(Math.random() * 10) - 5))
         }));
+        
+        // تحديث الاتصال
+        updateConnectionStatus();
         updateStats();
         renderNetworks();
-        updateVisualizer();
-        analyzeChannels();
-    }
+        
+        if (spinner) spinner.style.display = 'none';
+        isScanning = false;
+    }, 1500);
 }
 
 function startAutoScan() {
+    if (scanInterval) clearInterval(scanInterval);
     scanInterval = setInterval(() => {
-        loadNetworks();
-    }, 10000); // Auto refresh every 10 seconds
+        if (autoScanEnabled) {
+            scanNetworks();
+        }
+    }, 10000);
+}
+
+function toggleAutoScan() {
+    autoScanEnabled = !autoScanEnabled;
+    const btn = document.getElementById('btnAutoScan');
+    btn.classList.toggle('active', autoScanEnabled);
+    showToast(autoScanEnabled ? '✅ المسح التلقائي مفعل' : '⏸️ المسح التلقائي متوقف');
+}
+
+function toggleAutoScanSetting() {
+    autoScanEnabled = document.getElementById('autoScanToggle').checked;
+    const btn = document.getElementById('btnAutoScan');
+    btn.classList.toggle('active', autoScanEnabled);
 }
 
 function refreshNetworks() {
     const btn = document.getElementById('btnRefresh');
-    btn.classList.add('active');
-    btn.style.animation = 'spin 1s linear infinite';
+    btn.classList.add('spinning');
     
-    loadNetworks();
+    scanNetworks();
     
     setTimeout(() => {
-        btn.classList.remove('active');
-        btn.style.animation = '';
+        btn.classList.remove('spinning');
         showToast('✅ تم تحديث الشبكات');
     }, 2000);
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+function updateConnectionStatus() {
+    const connected = networks.find(n => n.connected);
+    const statusIcon = document.getElementById('statusIcon');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusSubtitle = document.getElementById('statusSubtitle');
+    const statusBadge = document.getElementById('statusBadge');
+    const connectionStatus = document.getElementById('connectionStatus');
+    
+    if (connected) {
+        statusIcon.className = 'status-icon connected';
+        statusIcon.innerHTML = '<i class="fas fa-wifi"></i>';
+        statusTitle.textContent = connected.ssid;
+        statusSubtitle.textContent = `متصل • ${connected.security} • ${connected.signal}%`;
+        statusBadge.textContent = 'متصل';
+        statusBadge.className = 'status-badge connected';
+    } else {
+        statusIcon.className = 'status-icon disconnected';
+        statusIcon.innerHTML = '<i class="fas fa-wifi"></i>';
+        statusTitle.textContent = 'غير متصل';
+        statusSubtitle.textContent = 'لا يوجد اتصال نشط';
+        statusBadge.textContent = 'منفصل';
+        statusBadge.className = 'status-badge';
+    }
 }
 
 function updateStats() {
     const totalNetworks = networks.length;
     const avgSignal = networks.length > 0 ? Math.round(networks.reduce((sum, n) => sum + n.signal, 0) / networks.length) : 0;
     const secureNetworks = networks.filter(n => ['WPA2', 'WPA3', 'WPA2/WPA3'].includes(n.security)).length;
+    const openNetworks = networks.filter(n => n.security === 'Open').length;
     
     document.getElementById('totalNetworks').textContent = totalNetworks;
     document.getElementById('avgSignal').textContent = avgSignal + '%';
     document.getElementById('secureNetworks').textContent = secureNetworks;
+    document.getElementById('openNetworks').textContent = openNetworks;
+    
+    // تنبيه للشبكات غير الآمنة
+    if (openNetworks > 0 && document.getElementById('securityAlertToggle').checked) {
+        showToast(`⚠️ تنبيه: ${openNetworks} شبكة مفتوحة غير آمنة`);
+    }
 }
 
 function renderNetworks() {
     const list = document.getElementById('networksList');
     
     if (!networks.length) {
-        list.innerHTML = '<div class="empty-networks"><span>📡</span><p>لم يتم العثور على شبكات</p></div>';
+        list.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>لم يتم العثور على شبكات</p>
+            </div>
+        `;
         return;
     }
     
     let filteredNetworks = networks;
     
+    // تطبيق الفلتر
     if (currentFilter === 'secure') {
         filteredNetworks = networks.filter(n => ['WPA2', 'WPA3', 'WPA2/WPA3'].includes(n.security));
     } else if (currentFilter === 'open') {
@@ -891,43 +1013,47 @@ function renderNetworks() {
         filteredNetworks = networks.filter(n => n.band === '5GHz');
     }
     
-    // Sort by signal strength
+    // تطبيق البحث
+    if (searchQuery) {
+        filteredNetworks = filteredNetworks.filter(n => 
+            n.ssid.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }
+    
+    // ترتيب حسب قوة الإشارة
     filteredNetworks.sort((a, b) => b.signal - a.signal);
     
     list.innerHTML = filteredNetworks.map((network, index) => {
+        const originalIndex = networks.indexOf(network);
+        const isSecure = ['WPA2', 'WPA3', 'WPA2/WPA3'].includes(network.security);
         const signalClass = network.signal >= 70 ? 'signal-excellent' : network.signal >= 40 ? 'signal-good' : 'signal-poor';
-        const secClass = getSecurityClass(network.security);
-        const icon = getNetworkIcon(network);
+        
+        // إنشاء أعمدة الإشارة
+        const signalBars = [1,2,3,4,5].map(level => {
+            const active = network.signal >= (level * 20);
+            return `<div class="signal-bar" style="height:${level * 4}px;background:${active ? (network.signal >= 70 ? 'var(--success)' : network.signal >= 40 ? 'var(--accent3)' : 'var(--danger)') : 'var(--border)'}"></div>`;
+        }).join('');
         
         return `
-            <div class="network-item ${network.connected ? 'connected' : ''}" onclick="showNetworkDetails(${index})">
-                <div class="n-icon">${icon}</div>
-                <div class="n-info">
-                    <div class="n-name">${network.ssid} ${network.connected ? '✓' : ''}</div>
-                    <div class="n-details">
-                        ${network.band} • قناة ${network.channel} • ${network.bssid}
+            <div class="network-item ${network.connected ? 'connected' : ''}" onclick="showNetworkDetails(${originalIndex})">
+                <div class="network-icon ${isSecure ? 'secure' : 'open'}">
+                    <i class="fas ${isSecure ? 'fa-lock' : 'fa-unlock'}"></i>
+                </div>
+                <div class="network-info">
+                    <div class="network-name">${network.ssid} ${network.connected ? '<i class="fas fa-check-circle" style="color:var(--success);font-size:10px"></i>' : ''}</div>
+                    <div class="network-details">
+                        <span><i class="fas fa-tower-broadcast"></i> ${network.band}</span>
+                        <span><i class="fas fa-hashtag"></i> ${network.channel}</span>
+                        <span><i class="fas fa-shield-halved"></i> ${network.security}</span>
                     </div>
                 </div>
-                <div class="n-sec ${secClass}">🔒</div>
-                <div class="n-signal ${signalClass}">${network.signal}%</div>
+                <div class="network-signal">
+                    <div class="signal-bars">${signalBars}</div>
+                    <div class="signal-percent ${signalClass}">${network.signal}%</div>
+                </div>
             </div>
         `;
     }).join('');
-}
-
-function getSecurityClass(security) {
-    if (security === 'WPA3') return 'sec-wpa3';
-    if (security === 'WPA2' || security === 'WPA2/WPA3') return 'sec-wpa2';
-    if (security === 'WPA') return 'sec-wpa';
-    if (security === 'WEP') return 'sec-wep';
-    return 'sec-open';
-}
-
-function getNetworkIcon(network) {
-    if (network.band === '5GHz') return '📶';
-    if (network.signal >= 70) return '📶';
-    if (network.signal >= 40) return '📶';
-    return '📶';
 }
 
 function filterNetworks(filter, btn) {
@@ -935,6 +1061,45 @@ function filterNetworks(filter, btn) {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     renderNetworks();
+}
+
+function filterSecure() {
+    currentFilter = 'secure';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.filter-btn')[1].classList.add('active');
+    renderNetworks();
+    scrollToNetworks();
+}
+
+function filterOpen() {
+    currentFilter = 'open';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.filter-btn')[2].classList.add('active');
+    renderNetworks();
+    scrollToNetworks();
+}
+
+function searchNetworks(query) {
+    searchQuery = query;
+    renderNetworks();
+}
+
+function scrollToNetworks() {
+    document.getElementById('networksList').scrollIntoView({behavior: 'smooth'});
+}
+
+function toggleSettings() {
+    const panel = document.getElementById('settingsPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('btnSettings').classList.toggle('active', panel.style.display === 'block');
+}
+
+function toggleHiddenNetworks() {
+    showToast('تم ' + (document.getElementById('showHiddenToggle').checked ? 'إظهار' : 'إخفاء') + ' الشبكات المخفية');
+}
+
+function toggleSecurityAlerts() {
+    showToast('تم ' + (document.getElementById('securityAlertToggle').checked ? 'تفعيل' : 'تعطيل') + ' تنبيهات الأمان');
 }
 
 function showNetworkDetails(index) {
@@ -948,6 +1113,7 @@ function showNetworkDetails(index) {
     title.textContent = network.ssid;
     
     const securityLevel = getSecurityLevel(network.security);
+    const signalQuality = network.signal >= 70 ? 'ممتاز' : network.signal >= 40 ? 'جيد' : 'ضعيف';
     
     body.innerHTML = `
         <div class="detail-row">
@@ -964,7 +1130,7 @@ function showNetworkDetails(index) {
         </div>
         <div class="detail-row">
             <span class="detail-label">قوة الإشارة</span>
-            <span class="detail-value">${network.signal}%</span>
+            <span class="detail-value">${network.signal}% (${signalQuality})</span>
         </div>
         <div class="detail-row">
             <span class="detail-label">نوع الأمان</span>
@@ -973,6 +1139,10 @@ function showNetworkDetails(index) {
         <div class="detail-row">
             <span class="detail-label">مستوى الأمان</span>
             <span class="detail-value">${securityLevel}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">الحالة</span>
+            <span class="detail-value">${network.connected ? '✅ متصل' : '❌ غير متصل'}</span>
         </div>
     `;
     
@@ -984,348 +1154,35 @@ function closeModal() {
 }
 
 function getSecurityLevel(security) {
-    if (security === 'WPA3') return '🟢 ممتاز';
-    if (security === 'WPA2' || security === 'WPA2/WPA3') return '🟢 جيد جداً';
-    if (security === 'WPA') return '🟡 متوسط';
-    if (security === 'WEP') return '🔴 ضعيف';
-    return '🔴 غير آمن';
+    if (security === 'WPA3') return '🟢 ممتاز - أعلى مستوى حماية';
+    if (security === 'WPA2' || security === 'WPA2/WPA3') return '🟢 جيد جداً - حماية قوية';
+    if (security === 'WPA') return '🟡 متوسط - حماية قديمة';
+    if (security === 'WEP') return '🔴 ضعيف - غير آمن';
+    return '🔴 غير آمن - شبكة مفتوحة';
 }
 
 function showToast(message) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2500);
-}"""
-
-# ═══════════════════════════════════════════════════════════
-# 📡 5. visualizer.js
-# ═══════════════════════════════════════════════════════════
-
-def build_visualizer_js():
-    return """// 📊 Network Visualizer
-let signalCanvas, signalCtx;
-let signalData = [];
-
-function initVisualizer() {
-    signalCanvas = document.getElementById('signalCanvas');
-    signalCtx = signalCanvas.getContext('2d');
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    animateSignals();
+    setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-function resizeCanvas() {
-    const container = signalCanvas.parentElement;
-    signalCanvas.width = container.clientWidth;
-    signalCanvas.height = container.clientHeight;
-}
-
-function updateVisualizer() {
-    // Update signal data from networks
-    signalData = networks.slice(0, 10).map(n => n.signal);
-}
-
-function animateSignals() {
-    requestAnimationFrame(animateSignals);
-    
-    if (!signalCtx) return;
-    
-    const w = signalCanvas.width;
-    const h = signalCanvas.height;
-    
-    // Clear canvas
-    signalCtx.fillStyle = 'rgba(10, 10, 26, 0.1)';
-    signalCtx.fillRect(0, 0, w, h);
-    
-    if (!signalData.length) {
-        signalData = [30, 45, 60, 50, 70, 55, 40, 65, 75, 50];
+// إغلاق النافذة عند النقر خارجها
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('networkModal');
+    if (e.target === modal) {
+        closeModal();
     }
-    
-    // Draw signal bars
-    const barWidth = w / signalData.length;
-    
-    signalData.forEach((signal, index) => {
-        const barHeight = (signal / 100) * (h - 20);
-        const x = index * barWidth;
-        const y = h - barHeight;
-        
-        // Gradient
-        const gradient = signalCtx.createLinearGradient(0, h, 0, y);
-        
-        if (signal >= 70) {
-            gradient.addColorStop(0, 'rgba(0, 255, 204, 0.3)');
-            gradient.addColorStop(1, 'rgba(0, 255, 204, 0.9)');
-        } else if (signal >= 40) {
-            gradient.addColorStop(0, 'rgba(255, 170, 0, 0.3)');
-            gradient.addColorStop(1, 'rgba(255, 170, 0, 0.9)');
-        } else {
-            gradient.addColorStop(0, 'rgba(255, 68, 68, 0.3)');
-            gradient.addColorStop(1, 'rgba(255, 68, 68, 0.9)');
-        }
-        
-        signalCtx.fillStyle = gradient;
-        signalCtx.fillRect(x + 2, y, barWidth - 4, barHeight);
-        
-        // Add glow effect
-        signalCtx.shadowColor = signal >= 70 ? '#00ffcc' : signal >= 40 ? '#ffaa00' : '#ff4444';
-        signalCtx.shadowBlur = 10;
-        signalCtx.fillRect(x + 2, y, barWidth - 4, 2);
-        signalCtx.shadowBlur = 0;
-    });
-}
-
-function analyzeChannels() {
-    const channelBars = document.getElementById('channelBars');
-    
-    // Count networks per channel
-    channelData = {};
-    networks.forEach(n => {
-        if (!channelData[n.channel]) {
-            channelData[n.channel] = {
-                count: 0,
-                totalSignal: 0,
-                networks: []
-            };
-        }
-        channelData[n.channel].count++;
-        channelData[n.channel].totalSignal += n.signal;
-        channelData[n.channel].networks.push(n.ssid);
-    });
-    
-    // Find best channel
-    let bestChannel = 6;
-    let minCongestion = Infinity;
-    
-    for (let ch = 1; ch <= 14; ch++) {
-        const congestion = channelData[ch] ? channelData[ch].count : 0;
-        if (congestion < minCongestion) {
-            minCongestion = congestion;
-            bestChannel = ch;
-        }
-    }
-    
-    document.getElementById('bestChannel').textContent = bestChannel;
-    
-    // Render channel bars
-    const channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-    
-    channelBars.innerHTML = channels.map(ch => {
-        const data = channelData[ch];
-        const count = data ? data.count : 0;
-        const avgSignal = data ? Math.round(data.totalSignal / data.count) : 0;
-        const height = count > 0 ? Math.min(100, count * 20 + 20) : 5;
-        
-        return `
-            <div class="channel-bar" style="height:${height}px" onclick="showChannelInfo(${ch})">
-                <div class="channel-bar-value">${count}</div>
-                <div class="channel-bar-label">${ch}</div>
-            </div>
-        `;
-    }).join('');
-    
-    // Update recommendation
-    const recommendation = document.getElementById('channelRecommendation');
-    recommendation.textContent = `✨ أفضل قناة: ${bestChannel}`;
-}
-
-function showChannelInfo(channel) {
-    const data = channelData[channel];
-    if (!data) {
-        showToast(`📡 القناة ${channel}: لا توجد شبكات`);
-        return;
-    }
-    
-    const networkList = data.networks.join(', ');
-    showToast(`📡 القناة ${channel}: ${data.count} شبكة - ${networkList}`);
-}"""
+});
+"""
 
 # ═══════════════════════════════════════════════════════════
-# 📡 6. speedtest.js
-# ═══════════════════════════════════════════════════════════
-
-def build_speedtest_js():
-    return """// 🚀 Speed Test
-let isTesting = false;
-let testInterval = null;
-
-function toggleSpeedTest() {
-    const panel = document.getElementById('speedPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    document.getElementById('btnSpeed').classList.toggle('active', panel.style.display === 'block');
-}
-
-function startSpeedTest() {
-    if (isTesting) return;
-    
-    isTesting = true;
-    const btn = document.getElementById('btnStartTest');
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاختبار...';
-    btn.disabled = true;
-    
-    // Reset values
-    document.getElementById('downloadSpeed').textContent = '0';
-    document.getElementById('uploadSpeed').textContent = '0';
-    document.getElementById('pingValue').textContent = '0';
-    document.getElementById('speedProgressBar').style.width = '0%';
-    
-    // Simulate speed test
-    let progress = 0;
-    let download = 0;
-    let upload = 0;
-    let ping = 0;
-    
-    testInterval = setInterval(() => {
-        progress += Math.random() * 5;
-        
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(testInterval);
-            isTesting = false;
-            btn.innerHTML = '<i class="fas fa-play"></i> بدء الاختبار';
-            btn.disabled = false;
-            
-            // Final values
-            download = (Math.random() * 100 + 50).toFixed(1);
-            upload = (Math.random() * 30 + 10).toFixed(1);
-            ping = Math.floor(Math.random() * 40 + 10);
-            
-            document.getElementById('downloadSpeed').textContent = download;
-            document.getElementById('uploadSpeed').textContent = upload;
-            document.getElementById('pingValue').textContent = ping;
-            
-            showToast('✅ اكتمل اختبار السرعة');
-        } else {
-            // Update values during test
-            download = (Math.random() * 100 + 50).toFixed(1);
-            upload = (Math.random() * 30 + 10).toFixed(1);
-            ping = Math.floor(Math.random() * 40 + 10);
-            
-            document.getElementById('downloadSpeed').textContent = download;
-            document.getElementById('uploadSpeed').textContent = upload;
-            document.getElementById('pingValue').textContent = ping;
-        }
-        
-        document.getElementById('speedProgressBar').style.width = progress + '%';
-    }, 500);
-}"""
-
-# ═══════════════════════════════════════════════════════════
-# 📡 7. security.js
-# ═══════════════════════════════════════════════════════════
-
-def build_security_js():
-    return """// 🔐 Security Analyzer
-function toggleSecurity() {
-    const panel = document.getElementById('securityPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    document.getElementById('btnSecurity').classList.toggle('active', panel.style.display === 'block');
-    
-    if (panel.style.display === 'block') {
-        runSecurityAnalysis();
-    }
-}
-
-function runSecurityAnalysis() {
-    const checks = [];
-    let score = 0;
-    
-    // Check connected network security
-    const connected = networks.find(n => n.connected);
-    
-    if (connected) {
-        if (connected.security === 'WPA3') {
-            checks.push({text: 'متصل بشبكة WPA3 آمنة', pass: true});
-            score += 30;
-        } else if (connected.security === 'WPA2') {
-            checks.push({text: 'متصل بشبكة WPA2 آمنة', pass: true});
-            score += 25;
-        } else if (connected.security === 'WPA') {
-            checks.push({text: 'شبكة WPA - مستوى أمان متوسط', pass: false});
-            score += 15;
-        } else if (connected.security === 'Open') {
-            checks.push({text: 'شبكة مفتوحة - غير آمنة!', pass: false});
-            score += 0;
-        } else {
-            checks.push({text: 'نوع أمان غير معروف', pass: false});
-            score += 5;
-        }
-    } else {
-        checks.push({text: 'لست متصلاً بأي شبكة', pass: false});
-    }
-    
-    // Check for open networks
-    const openNetworks = networks.filter(n => n.security === 'Open');
-    if (openNetworks.length > 0) {
-        checks.push({text: `يوجد ${openNetworks.length} شبكة مفتوحة في المنطقة`, pass: false});
-        score += 5;
-    } else {
-        checks.push({text: 'لا توجد شبكات مفتوحة', pass: true});
-        score += 15;
-    }
-    
-    // Check for WEP networks
-    const wepNetworks = networks.filter(n => n.security === 'WEP');
-    if (wepNetworks.length > 0) {
-        checks.push({text: `تحذير: ${wepNetworks.length} شبكة تستخدم WEP القديم`, pass: false});
-        score += 0;
-    } else {
-        checks.push({text: 'لا توجد شبكات WEP قديمة', pass: true});
-        score += 10;
-    }
-    
-    // Check channel congestion
-    const congestedChannels = Object.keys(channelData).filter(ch => channelData[ch].count > 3);
-    if (congestedChannels.length > 0) {
-        checks.push({text: `${congestedChannels.length} قناة مزدحمة`, pass: false});
-        score += 5;
-    } else {
-        checks.push({text: 'لا يوجد ازدحام في القنوات', pass: true});
-        score += 10;
-    }
-    
-    // Check signal strength
-    if (connected && connected.signal < 30) {
-        checks.push({text: 'إشارة ضعيفة - قد تواجه انقطاعاً', pass: false});
-        score += 5;
-    } else if (connected) {
-        checks.push({text: 'قوة إشارة جيدة', pass: true});
-        score += 15;
-    }
-    
-    // Update security score
-    const securityScore = document.getElementById('securityScore');
-    const finalScore = Math.min(100, score);
-    
-    securityScore.textContent = `${finalScore}%`;
-    securityScore.className = 'security-score';
-    
-    if (finalScore >= 80) {
-        securityScore.classList.add('excellent');
-    } else if (finalScore >= 50) {
-        securityScore.classList.add('good');
-    } else {
-        securityScore.classList.add('poor');
-    }
-    
-    // Render checks
-    const checksContainer = document.getElementById('securityChecks');
-    checksContainer.innerHTML = checks.map(check => `
-        <div class="security-check">
-            <div class="check-icon ${check.pass ? 'pass' : 'fail'}">
-                <i class="fas ${check.pass ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-            </div>
-            <div class="check-text">${check.text}</div>
-        </div>
-    `).join('');
-}"""
-
-# ═══════════════════════════════════════════════════════════
-# 📡 8. app.js
+# 📡 4. app.js - التهيئة الرئيسية
 # ═══════════════════════════════════════════════════════════
 
 def build_app_js():
-    return """// 📡 WiFi Analyzer Pro - Main App
+    return """// 📡 WiFi Access Pro - Main App
 function initParticles() {
     const container = document.getElementById('particlesContainer');
     const colors = ['#00ffcc', '#6366f1', '#ff44aa'];
@@ -1346,54 +1203,66 @@ function initParticles() {
     }
 }
 
-// Initialize app
+// تهيئة التطبيق
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     initScanner();
-    initVisualizer();
     
-    console.log('📡 WiFi Analyzer Pro initialized');
+    console.log('📡 WiFi Access Pro initialized');
+    console.log('🔍 Scanning for nearby networks...');
 });
+
+// معالجة الأخطاء
+window.onerror = function(msg, url, line, col, error) {
+    console.error('Error:', msg);
+    showToast('⚠️ حدث خطأ غير متوقع');
+    return false;
+};
 """
 
 # ═══════════════════════════════════════════════════════════
-# 📡 MAIN GENERATOR
+# 📡 MAIN - المولد الرئيسي
 # ═══════════════════════════════════════════════════════════
 
 def main():
     print("""
 ╔══════════════════════════════════════════════════════════╗
-║  📡  WIFI ANALYZER PRO - Ultimate Network Scanner       ║
-║     Advanced WiFi Analysis & Security Suite             ║
+║                                                          ║
+║  📡  WIFI ACCESS PRO - Network Manager                  ║
+║     Access WiFi & Display Nearby Networks               ║
+║                                                          ║
+║  🔍  Scan & Display WiFi Networks                       ║
+║  📊  Real-time Signal Monitoring                        ║
+║  🔐  Security Analysis                                  ║
+║  📱  Modern Glass Morphism UI                          ║
+║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
     """)
 
-    section("BUILDING WIFI ANALYZER PRO")
+    section("BUILDING WIFI ACCESS PRO")
 
     write("index.html", build_index())
     write("style.css", build_style())
-    write("scanner.py", build_scanner_py())
     write("scanner.js", build_scanner_js())
-    write("visualizer.js", build_visualizer_js())
-    write("speedtest.js", build_speedtest_js())
-    write("security.js", build_security_js())
     write("app.js", build_app_js())
 
     print(f"""
 {'='*60}
   ✅ BUILD COMPLETE! - {TOTAL_LINES} خط
-  📁 8 ملفات
+  📁 4 ملفات
 
-  📡 WiFi Network Scanner
-  📊 Signal Analysis & Visualization
-  🚀 Speed Test
-  🔐 Security Assessment
-  📈 Channel Analysis
+  📡 WiFi Access Pro Features:
+  • 🔍 عرض الشبكات القريبة
+  • 📊 مراقبة قوة الإشارة
+  • 🔐 تحليل الأمان
+  • 🔍 بحث وتصفية
+  • ⚡ مسح تلقائي
+  • 📱 واجهة زجاجية عصرية
 
   🚀 للتشغيل:
      افتح index.html في المتصفح
-     
-  📡 WIFI ANALYZER PRO READY!
+
+  📡 WIFI ACCESS PRO READY!
 {'='*60}
     """)
 
